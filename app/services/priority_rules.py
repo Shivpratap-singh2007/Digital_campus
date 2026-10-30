@@ -19,6 +19,9 @@ HISTORICAL_OR_RESOLVED_PATTERNS = [
 # Ordered from highest to lowest severity
 URGENT_PHRASES = [
     ("sparking socket", "Immediate electrical hazard with fire risk"),
+    ("sparking wire", "Immediate electrical hazard with fire risk"),
+    ("sparking outlet", "Immediate electrical hazard with fire risk"),
+    ("live wire", "Immediate electrocution hazard"),
     ("exposed live wire", "Immediate electrocution hazard"),
     ("exposed wire", "Potential electrocution hazard"),
     ("electrical fire", "Active fire or combustion event"),

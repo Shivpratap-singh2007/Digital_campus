@@ -1,3 +1,4 @@
+import os
 from flask import (
     render_template,
     redirect,
@@ -21,6 +22,10 @@ from app.services.complaint_analysis import run_complaint_analysis
 @complaints_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def new_complaint():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if request.method == "GET" and os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     # Enforce verified email prerequisite
     if not current_user.is_verified and current_user.role == "user":
         flash(
@@ -104,6 +109,10 @@ def new_complaint():
 @complaints_bp.route("/my-complaints")
 @login_required
 def my_complaints():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     complaints = (
         Complaint.query.filter_by(user_id=current_user.id)
         .order_by(Complaint.created_at.desc())
@@ -115,6 +124,10 @@ def my_complaints():
 @complaints_bp.route("/<int:complaint_id>")
 @login_required
 def detail(complaint_id):
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     complaint = Complaint.query.get_or_404(complaint_id)
 
     # Authorization check: only owner, handler, or admin can view complaint details

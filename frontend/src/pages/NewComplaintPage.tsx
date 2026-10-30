@@ -53,6 +53,7 @@ export const NewComplaintPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // Prevent duplicate concurrent submissions
     setError('');
 
     if (!user?.is_verified && user?.role === 'user') {

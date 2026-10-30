@@ -64,9 +64,6 @@ export const DashboardPage: React.FC = () => {
       {/* Header */}
       <div className="mb-4">
         <h3 className="mb-1 fw-bold text-dark">Campus Operations & Metrics Dashboard</h3>
-        <p className="text-muted small mb-0">
-          Calculated in real time from live SQLite database records. No synthetic multipliers or simulated counts.
-        </p>
       </div>
 
       {/* 6 Primary Metric Stat Widgets */}

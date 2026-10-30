@@ -94,16 +94,59 @@ class SemanticEngine:
         except Exception:
             pass
 
-        model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+        model_name = (
+            current_app.config.get("MODEL_NAME", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+            if current_app
+            else "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+        )
         try:
             import os
-            # Prevent hanging network retries in offline / sandbox environments
-            os.environ.setdefault("HF_HUB_OFFLINE", "1")
-            os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+            # Ensure unified HuggingFace cache path between build and runtime
+            hf_home = (
+                current_app.config.get("HF_HOME")
+                if current_app
+                else os.environ.get("HF_HOME")
+            )
+            if hf_home:
+                os.environ["HF_HOME"] = str(hf_home)
+                os.makedirs(hf_home, exist_ok=True)
+
+            # Optimize torch memory footprint on constrained CPU containers
+            try:
+                import torch
+                torch.set_num_threads(1)
+            except Exception:
+                pass
 
             from sentence_transformers import SentenceTransformer
-            # Try loading locally first without blocking network retries
-            self._model = SentenceTransformer(model_name, local_files_only=True)
+
+            # 1. Attempt loading from pre-cached files first
+            try:
+                self._model = SentenceTransformer(model_name, local_files_only=True)
+                logger.info(f"Loaded semantic model '{model_name}' from local cache.")
+            except Exception as cache_err:
+                # 2. Check if external downloads are permitted and network is reachable
+                allow_dl = (
+                    current_app.config.get("ALLOW_MODEL_DOWNLOAD", True)
+                    if current_app
+                    else os.environ.get("ALLOW_MODEL_DOWNLOAD", "true").lower() in ("true", "1", "yes")
+                )
+                net_ok = False
+                if allow_dl and os.environ.get("HF_HUB_OFFLINE") != "1" and os.environ.get("TRANSFORMERS_OFFLINE") != "1":
+                    import socket
+                    try:
+                        sock = socket.create_connection(("huggingface.co", 443), timeout=1.5)
+                        sock.close()
+                        net_ok = True
+                    except Exception:
+                        net_ok = False
+
+                if net_ok:
+                    logger.info(f"Model not found locally; downloading '{model_name}' into {hf_home}...")
+                    self._model = SentenceTransformer(model_name)
+                else:
+                    raise cache_err
+
             self._load_error = None
             self._precompute_category_embeddings()
             logger.info("Semantic embedding model successfully loaded and cached.")

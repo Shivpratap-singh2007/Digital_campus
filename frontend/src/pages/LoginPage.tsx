@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { fetchCsrfToken } from '../api/client';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -12,12 +13,19 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    // Proactively bootstrap CSRF session cookie in background upon viewing login page
+    fetchCsrfToken();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // Prevent duplicate submissions
     setError('');
     setLoading(true);
 
     try {
+      await fetchCsrfToken();
       const user = await login(email, password);
       const defaultDashboard = user.is_handler ? '/admin/dashboard' : '/';
       const from = (location.state as any)?.from?.pathname || defaultDashboard;
@@ -100,24 +108,16 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Prototype Demo Accounts Helper */}
+        {/* Campus Support Notice */}
         <div className="cv-card mt-3 bg-white">
-          <div className="cv-card-body p-3">
-            <div className="d-flex align-items-center gap-2 mb-2">
-              <i className="bi bi-info-circle text-muted"></i>
-              <span className="fw-semibold text-secondary small">Demo Seed Credentials</span>
+          <div className="cv-card-body p-3 text-center">
+            <div className="d-flex align-items-center justify-content-center gap-2 mb-1">
+              <i className="bi bi-shield-lock text-primary"></i>
+              <span className="fw-semibold text-secondary small">Authorized Campus Access Only</span>
             </div>
-            <div className="small text-muted d-flex flex-column gap-1">
-              <div>
-                <strong>Admin:</strong> <code>admin@campus.edu</code> / <code>AdminPass123!</code>
-              </div>
-              <div>
-                <strong>Handler:</strong> <code>handler@campus.edu</code> / <code>HandlerPass123!</code>
-              </div>
-              <div>
-                <strong>Student:</strong> <code>student.aarav@campus.edu</code> / <code>StudentPass123!</code>
-              </div>
-            </div>
+            <p className="text-muted small mb-0">
+              For account assistance or role provisioning, please contact the campus IT Operations Desk.
+            </p>
           </div>
         </div>
       </div>

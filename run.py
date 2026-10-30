@@ -19,6 +19,21 @@ with app.app_context():
     # Initialize missing schema tables safely without resetting data
     db.create_all()
 
+    # Safe schema migration check for is_synthetic_fixture
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("ALTER TABLE users ADD COLUMN is_synthetic_fixture BOOLEAN DEFAULT 0"))
+            conn.commit()
+    except Exception:
+        pass
+
+    # Idempotent fixture bootstrap if explicitly enabled via environment
+    bootstrap_enabled = os.environ.get("BOOTSTRAP_DEMO_DATA", "").lower() in ("true", "1", "yes") or \
+                        os.environ.get("DEMO_MODE", "").lower() in ("true", "1", "yes")
+    if bootstrap_enabled:
+        from app.services.fixtures import provision_synthetic_fixtures
+        provision_synthetic_fixtures(app)
+
 if __name__ == "__main__":
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", 5000))

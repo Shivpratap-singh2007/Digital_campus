@@ -14,8 +14,60 @@ from app.models import (
     AnalysisResult,
 )
 from app.services.complaint_analysis import run_complaint_analysis
+from app.services.security import validate_password_strength
 
 cli_bp = Blueprint("campus_cli", __name__)
+
+
+@cli_bp.cli.command("rotate-password")
+@click.option("--email", prompt=True, help="Account email address to rotate password for.")
+@click.option(
+    "--password",
+    prompt=True,
+    hide_input=True,
+    confirmation_prompt=True,
+    default=lambda: __import__("os").environ.get("NEW_PASSWORD", ""),
+    help="New password (accepts hidden prompt or NEW_PASSWORD environment variable).",
+)
+def rotate_password(email, password):
+    """Safely updates a user password via hidden prompt or environment variable without exposing credentials."""
+    email_clean = email.strip().lower()
+    user = User.query.filter_by(email=email_clean).first()
+    if not user:
+        click.echo(f"Error: Account '{email_clean}' not found.")
+        return
+
+    if not password:
+        click.echo("Error: Password cannot be empty.")
+        return
+
+    valid, msg = validate_password_strength(password)
+    if not valid:
+        click.echo(f"Error: Password does not meet security requirements: {msg}")
+        return
+
+    user.set_password(password)
+    db.session.commit()
+    click.echo(f"Password for account '{email_clean}' successfully rotated.")
+
+
+@cli_bp.cli.command("seed-fixtures")
+def seed_fixtures_command():
+    """Provisions synthetic demo fixtures (Students A/B, Handler, Admin, Unverified)."""
+    from app.services.fixtures import provision_synthetic_fixtures
+    click.echo("Provisioning synthetic demo fixtures...")
+    res = provision_synthetic_fixtures()
+    click.echo(f"Created: {len(res['created'])} account(s)")
+    for c in res['created']:
+        click.echo(f"  + [{c['role']}] {c['email']}")
+    click.echo(f"Preserved existing: {len(res['preserved'])} account(s)")
+    for p in res['preserved']:
+        click.echo(f"  = [{p['role']}] {p['email']}")
+    if res['conflicts']:
+        click.echo(f"Safeguard conflicts detected: {len(res['conflicts'])}")
+        for conf in res['conflicts']:
+            click.echo(f"  ! {conf['reason']}")
+    click.echo("Fixture provisioning complete.")
 
 
 @cli_bp.cli.command("warmup-model")

@@ -66,6 +66,12 @@ const AppShell: React.FC = () => {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/verify-email" element={<VerifyEmailPage />} />
 
+            {/* Aliases for legacy URLs so bookmarks and redirects work seamlessly */}
+            <Route path="/auth/login" element={<Navigate to="/login" replace />} />
+            <Route path="/auth/register" element={<Navigate to="/register" replace />} />
+            <Route path="/auth/verification-guidance" element={<Navigate to="/verify-email" replace />} />
+            <Route path="/auth/resend-verification" element={<Navigate to="/verify-email" replace />} />
+
             {/* Unified Mobile App Routes */}
             <Route
               path="/dashboard"
@@ -101,6 +107,7 @@ const AppShell: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="/complaints/my-complaints" element={<Navigate to="/my-complaints" replace />} />
             <Route
               path="/new-complaint"
               element={
@@ -109,6 +116,7 @@ const AppShell: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="/complaints/new" element={<Navigate to="/new-complaint" replace />} />
             <Route
               path="/complaints/:id"
               element={
@@ -135,6 +143,7 @@ const AppShell: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="/issues/create" element={<Navigate to="/admin/create-issue" replace />} />
             <Route
               path="/admin/issues/:id"
               element={
@@ -143,6 +152,7 @@ const AppShell: React.FC = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="/issues/:id" element={<Navigate to="/admin/issues/:id" replace />} />
             <Route
               path="/admin/dashboard"
               element={

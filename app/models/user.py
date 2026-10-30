@@ -15,6 +15,7 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.String(120), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="user")  # 'user', 'handler', 'admin'
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    is_synthetic_fixture = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
     # Relationships

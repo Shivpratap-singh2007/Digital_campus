@@ -1,4 +1,7 @@
 import smtplib
+import json
+import urllib.request
+import urllib.error
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta, timezone
@@ -54,29 +57,155 @@ def can_resend_verification(user: User) -> tuple[bool, str]:
     return True, ""
 
 
+def _send_via_resend(user: User, sender: str, text_content: str, html_content: str, api_key: str) -> tuple[bool, str]:
+    """Dispatches verification email via Resend HTTPS REST API."""
+    if not api_key:
+        return False, "Resend API key is not configured in environment variables (RESEND_API_KEY)."
+
+    url = "https://api.resend.com/emails"
+    payload = {
+        "from": sender,
+        "to": [user.email],
+        "subject": "Verify Your College Email - CampusVoice",
+        "html": html_content,
+        "text": text_content,
+    }
+    data_bytes = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data_bytes,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "CampusVoice-Mailer/1.0",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            resp_body = resp.read().decode("utf-8", errors="replace")
+            res_json = json.loads(resp_body) if resp_body else {}
+            email_id = res_json.get("id", "dispatched")
+            logger.info(f"Verification email successfully dispatched to {user.email} via Resend HTTPS API (id={email_id})")
+            return True, "Verification email sent successfully via Resend."
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")
+        try:
+            err_json = json.loads(err_body)
+            err_msg = err_json.get("message") or err_json.get("error") or err_body
+        except Exception:
+            err_msg = err_body
+        logger.warning(f"Resend HTTPS dispatch failed ({e.code}) for {user.email}: {err_msg}")
+        return False, f"Resend API error ({e.code}): {err_msg}"
+    except Exception as e:
+        logger.warning(f"Resend HTTPS dispatch network exception for {user.email}: {e}")
+        return False, f"Resend network error: {str(e)}"
+
+
+def _send_via_sendgrid(user: User, sender: str, text_content: str, html_content: str, api_key: str) -> tuple[bool, str]:
+    """Dispatches verification email via SendGrid HTTPS REST API (v3/mail/send)."""
+    if not api_key:
+        return False, "SendGrid API key is not configured in environment variables (SENDGRID_API_KEY)."
+
+    # Extract sender email and optional display name
+    sender_name = "CampusVoice Portal"
+    sender_email = sender
+    if "<" in sender and ">" in sender:
+        parts = sender.split("<")
+        sender_name = parts[0].strip() or sender_name
+        sender_email = parts[1].replace(">", "").strip()
+
+    url = "https://api.sendgrid.com/v3/mail/send"
+    payload = {
+        "personalizations": [{"to": [{"email": user.email, "name": user.full_name}]}],
+        "from": {"email": sender_email, "name": sender_name},
+        "subject": "Verify Your College Email - CampusVoice",
+        "content": [
+            {"type": "text/plain", "value": text_content},
+            {"type": "text/html", "value": html_content},
+        ],
+    }
+    data_bytes = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data_bytes,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "User-Agent": "CampusVoice-Mailer/1.0",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            # SendGrid returns 202 Accepted on success
+            if resp.status in (200, 201, 202):
+                logger.info(f"Verification email successfully dispatched to {user.email} via SendGrid HTTPS API")
+                return True, "Verification email sent successfully via SendGrid."
+            return False, f"SendGrid returned unexpected HTTP status {resp.status}."
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode("utf-8", errors="replace")
+        logger.warning(f"SendGrid HTTPS dispatch failed ({e.code}) for {user.email}: {err_body}")
+        return False, f"SendGrid API error ({e.code}): {err_body[:200]}"
+    except Exception as e:
+        logger.warning(f"SendGrid HTTPS dispatch network exception for {user.email}: {e}")
+        return False, f"SendGrid network error: {str(e)}"
+
+
+def _send_via_console(user: User, verify_url: str) -> tuple[bool, str]:
+    """Captures verification link in application logs (for demo/staging environments)."""
+    logger.info("=" * 70)
+    logger.info(f"[CONSOLE EMAIL ADAPTER] Recipient: {user.email} ({user.full_name})")
+    logger.info(f"[CONSOLE EMAIL ADAPTER] Verification URL: {verify_url}")
+    logger.info("=" * 70)
+    return True, "Verification email captured in application console logs."
+
+
+def _send_via_smtp(user: User, sender: str, msg: MIMEMultipart, server_host: str, server_port: int, username: str, password: str, use_tls: bool) -> tuple[bool, str]:
+    """Dispatches verification email via standard SMTP."""
+    try:
+        if use_tls:
+            server = smtplib.SMTP(server_host, server_port, timeout=5)
+            server.starttls()
+            if username and password:
+                server.login(username, password)
+            server.sendmail(sender, [user.email], msg.as_string())
+            server.quit()
+        else:
+            with smtplib.SMTP(server_host, server_port, timeout=5) as server:
+                if username and password:
+                    server.login(username, password)
+                server.sendmail(sender, [user.email], msg.as_string())
+
+        logger.info(f"Verification email successfully dispatched to {user.email} via SMTP")
+        return True, "Verification email sent successfully."
+    except Exception as e:
+        logger.warning(f"SMTP dispatch failed to {user.email}: {e}")
+        return False, f"Could not connect to SMTP server ({server_host}:{server_port}). You can retry resending."
+
+
 def send_verification_email(user: User, raw_token: str) -> tuple[bool, str]:
     """
-    Sends email with the verification link via SMTP.
-    Works with local Mailpit or standard SMTP servers.
-    Does NOT log the raw token.
+    Sends email with the verification link via configured transport:
+    - HTTPS Resend API (EMAIL_PROVIDER='resend' or RESEND_API_KEY present)
+    - HTTPS SendGrid API (EMAIL_PROVIDER='sendgrid' or SENDGRID_API_KEY present)
+    - Console Adapter (EMAIL_PROVIDER='console')
+    - SMTP Transport (fallback / local Mailpit)
+    
+    Security:
+    - Never logs or exposes raw verification token in API responses.
+    - Preserves single-use token lifecycle and domain validation.
     """
     public_base_url = current_app.config.get("PUBLIC_BASE_URL", "").rstrip("/")
     if public_base_url:
         verify_url = f"{public_base_url}/auth/verify/{raw_token}"
     else:
         verify_url = url_for("auth.verify_email", token=raw_token, _external=True)
-    
-    server_host = current_app.config.get("SMTP_SERVER", "localhost")
-    server_port = current_app.config.get("SMTP_PORT", 1025)
-    sender = current_app.config.get("SMTP_DEFAULT_SENDER", "CampusVoice <noreply@campus.edu>")
-    username = current_app.config.get("SMTP_USERNAME", "")
-    password = current_app.config.get("SMTP_PASSWORD", "")
-    use_tls = current_app.config.get("SMTP_USE_TLS", False)
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Verify Your College Email - CampusVoice"
-    msg["From"] = sender
-    msg["To"] = user.email
+    sender = current_app.config.get("SMTP_DEFAULT_SENDER", "CampusVoice Portal <noreply@campus.edu>")
+    provider = (current_app.config.get("EMAIL_PROVIDER") or "").strip().lower()
+    resend_key = current_app.config.get("RESEND_API_KEY", "").strip()
+    sendgrid_key = current_app.config.get("SENDGRID_API_KEY", "").strip()
 
     text_content = f"""Hello {user.full_name},
 
@@ -87,7 +216,7 @@ Please verify your college email address by clicking the link below:
 
 This link is single-use and will expire in {current_app.config.get('TOKEN_EXPIRATION_HOURS', 24)} hours.
 
-Notice: This is a hackathon prototype/demo verification system.
+Notice: This is a verified campus reporting system.
 If you did not request this registration, please ignore this email.
 """
 
@@ -108,35 +237,40 @@ If you did not request this registration, please ignore this email.
           </p>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
           <p style="font-size: 12px; color: #888;">
-            <em>Note: Locally captured email verification is configured for demo/prototype testing (e.g., Mailpit). Token is single-use and valid for {current_app.config.get('TOKEN_EXPIRATION_HOURS', 24)} hours.</em>
+            <em>Token is single-use and valid for {current_app.config.get('TOKEN_EXPIRATION_HOURS', 24)} hours.</em>
           </p>
         </div>
       </body>
     </html>
     """
 
+    # 1. Console provider (for development or staging environments without external credentials)
+    if provider == "console":
+        return _send_via_console(user, verify_url)
+
+    # 2. Resend HTTPS provider
+    if provider == "resend" or (not provider and resend_key):
+        return _send_via_resend(user, sender, text_content, html_content, resend_key)
+
+    # 3. SendGrid HTTPS provider
+    if provider == "sendgrid" or (not provider and sendgrid_key):
+        return _send_via_sendgrid(user, sender, text_content, html_content, sendgrid_key)
+
+    # 4. Standard SMTP provider (works with local Mailpit or configured SMTP server)
+    server_host = current_app.config.get("SMTP_SERVER", "localhost")
+    server_port = current_app.config.get("SMTP_PORT", 1025)
+    username = current_app.config.get("SMTP_USERNAME", "")
+    password = current_app.config.get("SMTP_PASSWORD", "")
+    use_tls = current_app.config.get("SMTP_USE_TLS", False)
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Verify Your College Email - CampusVoice"
+    msg["From"] = sender
+    msg["To"] = user.email
     msg.attach(MIMEText(text_content, "plain"))
     msg.attach(MIMEText(html_content, "html"))
 
-    try:
-        if use_tls:
-            server = smtplib.SMTP(server_host, server_port, timeout=5)
-            server.starttls()
-            if username and password:
-                server.login(username, password)
-            server.sendmail(sender, [user.email], msg.as_string())
-            server.quit()
-        else:
-            with smtplib.SMTP(server_host, server_port, timeout=5) as server:
-                if username and password:
-                    server.login(username, password)
-                server.sendmail(sender, [user.email], msg.as_string())
-        
-        logger.info(f"Verification email successfully dispatched to {user.email}")
-        return True, "Verification email sent successfully."
-    except Exception as e:
-        logger.warning(f"SMTP dispatch failed to {user.email}: {e}")
-        return False, f"Could not connect to SMTP server ({server_host}:{server_port}). You can retry resending."
+    return _send_via_smtp(user, sender, msg, server_host, server_port, username, password, use_tls)
 
 
 def verify_token(raw_token: str) -> tuple[bool, str, User | None]:

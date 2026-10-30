@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: campusvoice
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt && python -m flask campus_cli warmup-model
+    startCommand: python run.py
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PYTHON_VERSION
+        value: 3.11.10
+      - key: HF_HOME
+        value: /opt/render/project/src/.cache/huggingface
+      - key: ALLOW_MODEL_DOWNLOAD
+        value: "true"
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: BOOTSTRAP_DEMO_DATA
+        value: "true"

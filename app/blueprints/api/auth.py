@@ -1,4 +1,4 @@
-from flask import jsonify, request, current_app
+from flask import jsonify, request, current_app, session
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_wtf.csrf import generate_csrf
 from app.extensions import db
@@ -14,11 +14,24 @@ from app.services.email import (
 )
 
 
+@api_bp.route("/auth/csrf", methods=["GET"])
 @api_bp.route("/auth/csrf-token", methods=["GET"])
 def get_csrf_token():
-    """Returns a valid CSRF token for JSON and form requests."""
+    """
+    Returns a cryptographically signed CSRF token bound to the current Flask session.
+    Sets explicit no-store cache headers so the token and session cookie are never cached.
+    """
     token = generate_csrf()
-    return jsonify({"csrf_token": token})
+    # Explicitly ensure session is saved and Set-Cookie is written to response
+    session.modified = True
+    response = jsonify({
+        "csrf_token": token,
+        "csrfToken": token,
+    })
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @api_bp.route("/auth/me", methods=["GET"])

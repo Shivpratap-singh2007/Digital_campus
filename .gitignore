@@ -36,6 +36,8 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+.secret_key
+.cache/
 
 # Build archives
 *.zip

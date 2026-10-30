@@ -1,5 +1,6 @@
+import os
 from datetime import datetime, timezone
-from flask import render_template, redirect, url_for, flash, request, abort
+from flask import render_template, redirect, url_for, flash, request, abort, current_app, send_from_directory
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.blueprints.issues import issues_bp
@@ -19,6 +20,10 @@ def require_handler():
 @issues_bp.route("/create", methods=["GET", "POST"])
 @login_required
 def create_issue():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if request.method == "GET" and os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     require_handler()
     form = CreateIssueForm()
 
@@ -92,6 +97,10 @@ def create_issue():
 @issues_bp.route("/<int:issue_id>")
 @login_required
 def detail(issue_id):
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     require_handler()
     issue = Issue.query.get_or_404(issue_id)
 

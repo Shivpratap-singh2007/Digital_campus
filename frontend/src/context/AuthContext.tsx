@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../api/client';
+import { api, clearCsrfToken, fetchCsrfToken } from '../api/client';
 
 export interface User {
   id: number;
@@ -46,12 +46,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
+    // Ensure fresh token bootstrap before sending credentials
+    await fetchCsrfToken();
     const data = await api.post('/api/auth/login', { email, password });
+    // Invalidate pre-auth token on successful login
+    clearCsrfToken();
     setUser(data.user);
     return data.user;
   };
 
   const register = async (fullName: string, email: string, password: string): Promise<any> => {
+    await fetchCsrfToken();
     const data = await api.post('/api/auth/register', {
       full_name: fullName,
       email,
@@ -64,6 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await api.post('/api/auth/logout');
     } finally {
+      // Invalidate frontend token on session termination
+      clearCsrfToken();
       setUser(null);
     }
   };

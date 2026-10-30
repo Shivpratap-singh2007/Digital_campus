@@ -1,4 +1,5 @@
-from flask import render_template, redirect, url_for, flash, request, current_app
+import os
+from flask import render_template, redirect, url_for, flash, request, current_app, send_from_directory
 from flask_login import login_user, logout_user, login_required, current_user
 from app.extensions import db
 from app.blueprints.auth import auth_bp
@@ -14,6 +15,10 @@ from app.services.email import (
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if request.method == "GET" and os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     if current_user.is_authenticated:
         return redirect(url_for("complaints.my_complaints"))
 
@@ -60,6 +65,10 @@ def register():
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if request.method == "GET" and os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     if current_user.is_authenticated:
         return redirect(url_for("complaints.my_complaints"))
 
@@ -93,7 +102,7 @@ def login():
 def logout():
     logout_user()
     flash("You have been securely logged out.", "info")
-    return redirect(url_for("auth.login"))
+    return redirect("/login")
 
 
 @auth_bp.route("/verify/<token>")
@@ -107,14 +116,18 @@ def verify_email(token):
         flash(message, "success")
         if not current_user.is_authenticated and user:
             login_user(user)
-        return redirect(url_for("complaints.my_complaints"))
+        return redirect("/my-complaints")
     else:
         flash(message, "danger")
-        return redirect(url_for("auth.resend_verification"))
+        return redirect("/verify-email")
 
 
 @auth_bp.route("/resend-verification", methods=["GET", "POST"])
 def resend_verification():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if request.method == "GET" and os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     form = ResendVerificationForm()
     if request.method == "GET" and current_user.is_authenticated:
         form.email.data = current_user.email
@@ -149,5 +162,9 @@ def resend_verification():
 
 @auth_bp.route("/verification-guidance")
 def verification_guidance():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     email = request.args.get("email", "")
     return render_template("auth/verification_guidance.html", email=email)

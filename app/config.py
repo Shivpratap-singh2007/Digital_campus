@@ -5,17 +5,50 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _resolve_secret_key(base_dir: Path) -> str:
+    """
+    Ensures SECRET_KEY is stable across process restarts and multi-worker setups.
+    Prioritizes explicit environment configuration, falling back to a persisted
+    local key file before generating an ephemeral secret.
+    """
+    env_secret = os.environ.get("SECRET_KEY")
+    if env_secret and env_secret.strip():
+        return env_secret.strip()
+
+    key_file = base_dir / ".secret_key"
+    try:
+        if key_file.exists():
+            key = key_file.read_text(encoding="utf-8").strip()
+            if key:
+                return key
+        new_key = secrets.token_hex(32)
+        key_file.write_text(new_key, encoding="utf-8")
+        return new_key
+    except Exception:
+        return secrets.token_hex(32)
+
+
 class Config:
     """Base application configuration."""
-    # Cryptographically strong secret key fallback if not provided in environment
-    SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+    # Cryptographically strong secret key (stable across workers & restarts)
+    SECRET_KEY = _resolve_secret_key(BASE_DIR)
     WTF_CSRF_SECRET_KEY = os.environ.get("WTF_CSRF_SECRET_KEY") or SECRET_KEY
     WTF_CSRF_TIME_LIMIT = 3600 * 4  # 4-hour CSRF token validity
 
     # Session & Cookie Security
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() in ("true", "1", "yes")
+
+    # Auto-enable Secure cookies in production/Render (HTTPS), while permitting local HTTP development
+    _is_render = bool(os.environ.get("RENDER"))
+    _public_url = os.environ.get("PUBLIC_BASE_URL", "").lower()
+    _is_https = _public_url.startswith("https://") or _is_render
+    _env_secure = os.environ.get("SESSION_COOKIE_SECURE")
+    if _env_secure is not None:
+        SESSION_COOKIE_SECURE = _env_secure.lower() in ("true", "1", "yes")
+    else:
+        SESSION_COOKIE_SECURE = _is_https
+
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = "Lax"
     REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
@@ -52,6 +85,11 @@ class Config:
     MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024   # 5 MB max image file size
     MAX_IMAGE_PIXELS = 16_000_000           # 16 MP max decoded image pixels (e.g. 4000x4000)
 
+    # Email Dispatcher Configuration
+    EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "smtp").lower()  # 'smtp', 'resend', 'sendgrid', 'console'
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+    SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
+
     # SMTP Configuration (compatible with Mailpit or configured SMTP server)
     SMTP_SERVER = os.environ.get("SMTP_SERVER", "localhost")
     SMTP_PORT = int(os.environ.get("SMTP_PORT", 1025))
@@ -59,6 +97,10 @@ class Config:
     SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
     SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "false").lower() in ("true", "1", "yes")
     SMTP_DEFAULT_SENDER = os.environ.get("SMTP_DEFAULT_SENDER", "CampusVoice Portal <noreply@campus.edu>")
+
+    # Fixtures & Demo Mode
+    DEMO_MODE = os.environ.get("DEMO_MODE", "false").lower() in ("true", "1", "yes")
+    BOOTSTRAP_DEMO_DATA = os.environ.get("BOOTSTRAP_DEMO_DATA", "false").lower() in ("true", "1", "yes")
 
     # Verification token validity & rate limits
     TOKEN_EXPIRATION_HOURS = int(os.environ.get("TOKEN_EXPIRATION_HOURS", 24))
@@ -69,7 +111,9 @@ class Config:
     AUTH_RATE_LIMIT = int(os.environ.get("AUTH_RATE_LIMIT", 10))
     SUBMISSION_RATE_LIMIT = int(os.environ.get("SUBMISSION_RATE_LIMIT", 15))
 
-    # Semantic analysis
+    # Semantic analysis & HuggingFace Model Cache
+    HF_HOME = os.environ.get("HF_HOME", str(BASE_DIR / ".cache" / "huggingface"))
+    ALLOW_MODEL_DOWNLOAD = os.environ.get("ALLOW_MODEL_DOWNLOAD", "true").lower() in ("true", "1", "yes")
     MODEL_NAME = os.environ.get(
         "MODEL_NAME", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )

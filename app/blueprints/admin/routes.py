@@ -1,4 +1,5 @@
-from flask import render_template, redirect, url_for, flash, request, abort
+import os
+from flask import render_template, redirect, url_for, flash, request, abort, current_app, send_from_directory
 from flask_login import login_required, current_user
 from sqlalchemy import func
 from app.extensions import db
@@ -25,6 +26,10 @@ def require_admin():
 @admin_bp.route("/queue")
 @login_required
 def queue():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     require_handler()
 
     # Query filter parameters
@@ -154,6 +159,10 @@ def set_final_attributes(complaint_id):
 @admin_bp.route("/dashboard")
 @login_required
 def dashboard():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     require_handler()
 
     # Exact metrics strictly computed from database
@@ -209,6 +218,10 @@ def dashboard():
 @admin_bp.route("/audit-log")
 @login_required
 def audit_log():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     require_admin()
     events = AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(100).all()
     return render_template("admin/audit_log.html", events=events)

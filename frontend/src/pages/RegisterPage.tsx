@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { fetchCsrfToken } from '../api/client';
 
 export const RegisterPage: React.FC = () => {
   const { register } = useAuth();
@@ -13,8 +14,14 @@ export const RegisterPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    // Proactively bootstrap CSRF session cookie in background upon viewing registration page
+    fetchCsrfToken();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // Prevent duplicate submissions
     setError('');
 
     if (password !== confirmPassword) {
@@ -24,6 +31,7 @@ export const RegisterPage: React.FC = () => {
 
     setLoading(true);
     try {
+      await fetchCsrfToken();
       await register(fullName, email, password);
       navigate('/verify-email', { state: { email } });
     } catch (err: any) {

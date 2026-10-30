@@ -1,5 +1,6 @@
 import os
 from flask import Flask, render_template, abort, send_from_directory, request, jsonify, redirect, url_for
+from flask_wtf.csrf import CSRFError
 from app.config import Config
 from app.extensions import db, login_manager, csrf
 from app.models.user import User
@@ -26,7 +27,7 @@ def create_app(config_class=Config):
     def unauthorized_callback():
         if request.path.startswith("/api/"):
             return jsonify({"error": "Authentication required."}), 401
-        return redirect(url_for("auth.login"))
+        return redirect("/login")
 
     # Register Blueprints
     from app.blueprints.main import main_bp
@@ -59,6 +60,43 @@ def create_app(config_class=Config):
     # Static assets and SPA routes for built React frontend
     frontend_dist = os.path.abspath(os.path.join(app.root_path, "..", "frontend", "dist"))
     if os.path.exists(frontend_dist):
+        @app.before_request
+        def intercept_react_spa():
+            # Only intercept GET and HEAD requests
+            if request.method not in ("GET", "HEAD"):
+                return None
+
+            # Never intercept API endpoints (preserve JSON API routes and unknown /api 404s)
+            if request.path.startswith("/api/") or request.path == "/api":
+                return None
+
+            # Never intercept static bundle assets
+            if request.path.startswith("/assets/"):
+                return None
+
+            # Never intercept health checks
+            if request.path in ("/healthz", "/api/health"):
+                return None
+
+            # Never intercept authorized file attachments
+            if request.path.startswith("/complaints/attachment/"):
+                return None
+
+            # Never intercept email verification link validation route
+            if request.path.startswith("/auth/verify/"):
+                return None
+
+            # Serve static files if they exist directly in dist root (favicon, robots.txt, etc.)
+            clean_path = request.path.lstrip("/")
+            if clean_path:
+                target_file = os.path.join(frontend_dist, clean_path)
+                if os.path.isfile(target_file):
+                    return send_from_directory(frontend_dist, clean_path)
+
+            # Route all other frontend URLs (including /admin/dashboard, /admin/queue, etc.)
+            # to index.html so React Router renders the intended modern view
+            return send_from_directory(frontend_dist, "index.html")
+
         @app.route("/assets/<path:path>")
         def serve_react_assets(path):
             assets_dir = os.path.join(frontend_dist, "assets")
@@ -118,6 +156,17 @@ def create_app(config_class=Config):
         }
 
     # Error handlers (Dual-mode: JSON for API, HTML for web)
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        reason = getattr(e, "description", "CSRF token validation failed.")
+        if request.path.startswith("/api/"):
+            return jsonify({
+                "error": reason,
+                "code": "CSRF_ERROR",
+                "message": reason,
+            }), 400
+        return render_template("errors/404.html"), 400
+
     @app.errorhandler(400)
     def bad_request(e):
         if request.path.startswith("/api/"):
