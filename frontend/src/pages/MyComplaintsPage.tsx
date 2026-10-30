@@ -8,19 +8,24 @@ export const MyComplaintsPage: React.FC = () => {
   const { user } = useAuth();
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
   const [filterType, setFilterType] = useState<string>('');
 
-  useEffect(() => {
-    async function loadComplaints() {
-      try {
-        const data = await api.get('/api/complaints');
-        setComplaints(data.complaints || []);
-      } catch (err) {
-        console.error('Failed to load user complaints:', err);
-      } finally {
-        setLoading(false);
-      }
+  const loadComplaints = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await api.get('/api/complaints');
+      setComplaints(data.complaints || []);
+    } catch (err: any) {
+      console.error('Failed to load user complaints:', err);
+      setError(err.message || 'Failed to load submissions. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadComplaints();
   }, []);
 
@@ -96,6 +101,19 @@ export const MyComplaintsPage: React.FC = () => {
       )}
 
       {/* Complaints Table */}
+      {error && (
+        <div className="cv-card p-4 text-center my-4">
+          <div className="text-danger mb-2">
+            <i className="bi bi-exclamation-triangle" style={{ fontSize: '2rem' }}></i>
+          </div>
+          <h5 className="fw-semibold text-dark mb-1">Could not load submissions</h5>
+          <p className="text-muted small mb-3">{error}</p>
+          <button onClick={loadComplaints} className="btn btn-outline-secondary btn-sm">
+            <i className="bi bi-arrow-clockwise me-1"></i>Try Again
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="cv-card p-5 text-center text-muted">
           <div className="spinner-border spinner-border-sm text-secondary me-2" role="status"></div>

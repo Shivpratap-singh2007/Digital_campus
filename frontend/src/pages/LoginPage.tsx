@@ -19,7 +19,8 @@ export const LoginPage: React.FC = () => {
 
     try {
       const user = await login(email, password);
-      const from = (location.state as any)?.from?.pathname || (user.is_handler ? '/admin/queue' : '/my-complaints');
+      const defaultDashboard = user.is_handler ? '/admin/dashboard' : '/';
+      const from = (location.state as any)?.from?.pathname || defaultDashboard;
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check credentials.');

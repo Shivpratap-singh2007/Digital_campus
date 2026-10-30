@@ -142,6 +142,11 @@ export const Navbar: React.FC = () => {
                         <i className="bi bi-collection me-2 text-secondary"></i>My Complaints
                       </Link>
                     </li>
+                    <li>
+                      <Link className="dropdown-item py-2" to="/settings">
+                        <i className="bi bi-gear me-2 text-secondary"></i>Account Settings
+                      </Link>
+                    </li>
                     <li><hr className="dropdown-divider" /></li>
                     <li>
                       <button className="dropdown-item text-danger py-2" onClick={handleLogout}>
