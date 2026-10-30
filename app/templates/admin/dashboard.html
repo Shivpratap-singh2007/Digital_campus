@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Operations Dashboard — CampusVoice{% endblock %}
+{% block content %}
+<div class="mb-4">
+    <h3 class="mb-1 text-dark"><i class="bi bi-graph-up me-2"></i>Campus Operations & Metrics Dashboard</h3>
+    <p class="text-muted small mb-0">All metrics are strictly calculated from live SQLite database records. No synthetic multipliers or simulated counts.</p>
+</div>
+
+<!-- 6 Primary Metric Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-xl-2">
+        <div class="card card-shadow border-0 bg-white p-3 text-center h-100">
+            <span class="text-muted small fw-semibold text-uppercase">Total Submissions</span>
+            <h2 class="display-6 fw-bold text-dark mt-2 mb-0">{{ total_submissions }}</h2>
+            <small class="text-muted">Raw user reports</small>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card card-shadow border-0 bg-white p-3 text-center h-100">
+            <span class="text-muted small fw-semibold text-uppercase">Distinct Issues</span>
+            <h2 class="display-6 fw-bold text-primary mt-2 mb-0">{{ distinct_issues }}</h2>
+            <small class="text-muted">Consolidated tasks</small>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card card-shadow border-0 bg-white p-3 text-center h-100">
+            <span class="text-muted small fw-semibold text-uppercase">Unresolved Issues</span>
+            <h2 class="display-6 fw-bold text-warning mt-2 mb-0">{{ unresolved_issues }}</h2>
+            <small class="text-muted">Active in progress</small>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card card-shadow border-0 bg-white p-3 text-center h-100">
+            <span class="text-muted small fw-semibold text-uppercase">Urgent Reviews</span>
+            <h2 class="display-6 fw-bold text-danger mt-2 mb-0">{{ urgent_reviews }}</h2>
+            <small class="text-muted">High-hazard flags</small>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card card-shadow border-0 bg-white p-3 text-center h-100">
+            <span class="text-muted small fw-semibold text-uppercase">Resolved Issues</span>
+            <h2 class="display-6 fw-bold text-success mt-2 mb-0">{{ resolved_issues }}</h2>
+            <small class="text-muted">Completed repairs</small>
+        </div>
+    </div>
+    <div class="col-md-4 col-xl-2">
+        <div class="card card-shadow border-0 bg-white p-3 text-center h-100">
+            <span class="text-muted small fw-semibold text-uppercase">Disputed Feedback</span>
+            <h2 class="display-6 fw-bold text-danger mt-2 mb-0">{{ disputed_resolutions }}</h2>
+            <small class="text-muted">Failed verification</small>
+        </div>
+    </div>
+</div>
+
+<!-- Numerical Tables & Charts Breakdown -->
+<div class="row g-4">
+    <!-- Category Breakdown Table -->
+    <div class="col-lg-6">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-dark"><i class="bi bi-tags me-2"></i>Submissions by Category</h5>
+            </div>
+            <div class="card-body">
+                {% if cat_counts %}
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Category</th>
+                                <th class="text-end">Submissions</th>
+                                <th class="text-end" style="width: 140px;">Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat, cnt in cat_counts %}
+                                <tr>
+                                    <td><strong>{{ cat }}</strong></td>
+                                    <td class="text-end">{{ cnt }}</td>
+                                    <td class="text-end">
+                                        {% if total_submissions > 0 %}
+                                            <span class="badge bg-secondary-subtle text-secondary">{{ ((cnt / total_submissions) * 100)|round(1) }}%</span>
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-muted small">No submissions recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Issue Status Breakdown Table -->
+    <div class="col-lg-6">
+        <div class="card card-shadow h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-dark"><i class="bi bi-pie-chart me-2"></i>Issues by Operational Status</h5>
+            </div>
+            <div class="card-body">
+                {% if issue_status_counts %}
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Operational Status</th>
+                                <th class="text-end">Count</th>
+                                <th class="text-end" style="width: 140px;">Proportion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for st, cnt in issue_status_counts %}
+                                <tr>
+                                    <td>
+                                        <span class="badge {% if st == 'resolved' %}bg-success{% elif st == 'in_progress' %}bg-info text-dark{% elif st == 'under_review' %}bg-warning text-dark{% else %}bg-secondary{% endif %} text-capitalize">
+                                            {{ st.replace('_', ' ') }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end font-monospace">{{ cnt }}</td>
+                                    <td class="text-end">
+                                        {% if distinct_issues > 0 %}
+                                            <span class="badge bg-secondary-subtle text-secondary">{{ ((cnt / distinct_issues) * 100)|round(1) }}%</span>
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="text-muted small">No issues created yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Location Breakdown -->
+    <div class="col-12">
+        <div class="card card-shadow">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-dark"><i class="bi bi-geo-alt me-2"></i>Top Report Locations Across Campus</h5>
+            </div>
+            <div class="card-body">
+                {% if loc_counts %}
+                    <div class="row g-3">
+                        {% for loc, cnt in loc_counts %}
+                            <div class="col-md-3">
+                                <div class="border rounded p-3 bg-light text-center">
+                                    <div class="fw-semibold text-truncate" title="{{ loc }}">{{ loc }}</div>
+                                    <div class="h4 text-primary mt-1 mb-0">{{ cnt }}</div>
+                                    <small class="text-muted">reports logged</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small">No location activity recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

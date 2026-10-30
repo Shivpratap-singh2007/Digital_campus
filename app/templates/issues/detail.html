@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+{% block title %}Issue #{{ issue.id }} — CampusVoice{% endblock %}
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('admin.queue') }}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Back to Complaints Queue
+    </a>
+</div>
+
+<div class="row">
+    <!-- Main Issue Details and Linked Complaints -->
+    <div class="col-lg-8">
+        <div class="card card-shadow mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-primary me-2">Issue #{{ issue.id }}</span>
+                    <span class="text-muted small">Created {{ issue.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                <div>
+                    {% if issue.status == 'resolved' %}
+                        <span class="badge bg-success fs-6"><i class="bi bi-check2-circle"></i> Resolved</span>
+                    {% elif issue.status == 'in_progress' %}
+                        <span class="badge bg-info text-dark fs-6">In Progress</span>
+                    {% elif issue.status == 'under_review' %}
+                        <span class="badge bg-warning text-dark fs-6">Under Review</span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6">Submitted</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <h3 class="card-title text-dark mb-3">{{ issue.title }}</h3>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-geo-alt me-1"></i>{{ issue.building }}
+                        {% if issue.room %} &bull; {{ issue.room }}{% endif %}
+                    </span>
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-tag me-1"></i>Category: {{ issue.category }}
+                    </span>
+                    <span class="badge {% if issue.priority == 'Urgent review' %}badge-urgent{% elif issue.priority == 'High' %}badge-high{% else %}badge-normal{% endif %}">
+                        <i class="bi bi-flag-fill me-1"></i>Priority: {{ issue.priority }}
+                    </span>
+                </div>
+
+                <div class="p-3 bg-light rounded mb-4">
+                    <h6 class="text-secondary small fw-bold text-uppercase mb-2">Synthesized Public Summary</h6>
+                    <p class="mb-0 text-dark" style="white-space: pre-wrap;">{{ issue.description }}</p>
+                </div>
+
+                <!-- Linked Complaints List -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0 text-dark">
+                            <i class="bi bi-link-45deg me-1"></i>Linked Submissions ({{ linked_complaints|length }})
+                        </h5>
+                        <small class="text-muted">Original reports are preserved intact.</small>
+                    </div>
+
+                    {% if linked_complaints %}
+                        <div class="list-group">
+                            {% for c in linked_complaints %}
+                                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong>#{{ c.id }}</strong>
+                                            <a href="{{ url_for('complaints.detail', complaint_id=c.id) }}" class="fw-semibold text-decoration-none">
+                                                {{ c.title }}
+                                            </a>
+                                            <span class="badge bg-secondary text-capitalize small">{{ c.submission_type }}</span>
+                                        </div>
+                                        <div class="small text-muted mt-1">
+                                            <span><i class="bi bi-geo-alt"></i> {{ c.building }} {% if c.room %}({{ c.room }}){% endif %}</span> &bull;
+                                            <span><i class="bi bi-tag"></i> {{ c.display_category }}</span> &bull;
+                                            <span>Relationship: <code>{{ c.issue_link.relationship_type }}</code></span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <!-- Reversible Grouping Action: Unlink -->
+                                        <form method="POST" action="{{ url_for('issues.unlink_complaint', issue_id=issue.id, complaint_id=c.id) }}" class="d-inline" onsubmit="return confirm('Unlink this complaint? The complaint will be preserved intact.');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Unlink / Undo Grouping">
+                                                <i class="bi bi-x-circle me-1"></i>Unlink
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning small mb-0">
+                            No complaints currently linked to this issue.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Suggested Related Reports (Semantic AI & Proximity) -->
+                <div class="mb-4">
+                    <h5 class="mb-2 text-dark">
+                        <i class="bi bi-magic me-1 text-primary"></i>Suggested Related Reports
+                    </h5>
+                    <p class="text-muted small mb-3">
+                        Candidate complaints ranked using multilingual semantic similarity and structured location proximity. Handlers can confirm same incident or link as related.
+                    </p>
+
+                    {% if suggested_matches %}
+                        <div class="list-group">
+                            {% for match in suggested_matches %}
+                                {% set mc = match.complaint %}
+                                <div class="list-group-item p-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <strong>#{{ mc.id }}</strong>
+                                                <a href="{{ url_for('complaints.detail', complaint_id=mc.id) }}" target="_blank" class="fw-semibold text-decoration-none">
+                                                    {{ mc.title }}
+                                                </a>
+                                                {% if match.is_possible_recurrence %}
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger">
+                                                        <i class="bi bi-arrow-repeat"></i> Possible Recurrence
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="small text-muted mt-1">
+                                                <i class="bi bi-geo-alt"></i> {{ mc.building }} {% if mc.room %}({{ mc.room }}){% endif %} &bull;
+                                                <span class="text-primary fw-semibold">{{ match.match_details }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <!-- Fast Link Forms -->
+                                            <form method="POST" action="{{ url_for('issues.link_complaint', issue_id=issue.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="complaint_id" value="{{ mc.id }}">
+                                                <input type="hidden" name="relationship_type" value="same_incident">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                    Confirm Same Incident
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="{{ url_for('issues.link_complaint', issue_id=issue.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="complaint_id" value="{{ mc.id }}">
+                                                <input type="hidden" name="relationship_type" value="related_only">
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                    Mark Related Only
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-light border small text-muted mb-0">
+                            No unlinked candidate complaints found with high semantic or location similarity.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Status Transition History -->
+                <div class="card bg-white border">
+                    <div class="card-header bg-light py-2">
+                        <h6 class="mb-0 text-dark fw-bold"><i class="bi bi-clock-history me-1"></i>Issue Status History</h6>
+                    </div>
+                    <div class="card-body p-3">
+                        {% if issue_status_events %}
+                            <ul class="list-group list-group-flush">
+                                {% for ev in issue_status_events %}
+                                    <li class="list-group-item px-0 py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="badge bg-secondary text-capitalize me-2">{{ ev.new_status }}</span>
+                                                <span class="text-dark">{{ ev.note }}</span>
+                                            </div>
+                                            <small class="text-muted">{{ ev.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted small mb-0">No status updates logged.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Status Operations & Resolution Feedback Rounds -->
+    <div class="col-lg-4">
+        <!-- Operational Status Update Form -->
+        <div class="card card-shadow mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-dark"><i class="bi bi-sliders me-2"></i>Update Operational Status</h5>
+            </div>
+            <div class="card-body p-3">
+                <form method="POST" action="{{ url_for('issues.update_status', issue_id=issue.id) }}">
+                    {{ status_form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ status_form.new_status.label }}</label>
+                        {{ status_form.new_status(class="form-select") }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ status_form.note.label }}</label>
+                        {{ status_form.note(class="form-control", rows=3, placeholder="Required explanation. If marking Resolved, describe the specific repairs completed...") }}
+                        <div class="form-text small text-muted">{{ status_form.note.description }}</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-repeat me-1"></i>Commit Status Update
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Resolution Rounds & Verified Feedback -->
+        <div class="card card-shadow mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-dark"><i class="bi bi-patch-check me-2"></i>Resolution Feedback Rounds</h5>
+            </div>
+            <div class="card-body p-3">
+                {% if resolution_rounds %}
+                    {% for round in resolution_rounds %}
+                        <div class="border rounded p-3 mb-3 {% if loop.last and issue.status == 'resolved' %}border-success{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold">Round #{{ round.round_number }}</span>
+                                {% if round.status == 'submitter_confirmed' %}
+                                    <span class="badge bg-success"><i class="bi bi-check-all"></i> Submitter-Confirmed</span>
+                                {% elif round.status == 'disputed' %}
+                                    <span class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> Disputed (Needs Review)</span>
+                                {% elif round.status == 'pending_feedback' %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Pending Feedback</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">No Response</span>
+                                {% endif %}
+                            </div>
+
+                            <p class="small text-muted mb-2">
+                                <strong>Resolution Note:</strong> <em>"{{ round.resolution_note }}"</em>
+                            </p>
+
+                            <!-- Aggregate Feedback Counts (Concealing individual respondents) -->
+                            {% set fixed_count = namespace(v=0) %}
+                            {% set partial_count = namespace(v=0) %}
+                            {% set not_fixed_count = namespace(v=0) %}
+
+                            {% for fb in round.feedbacks %}
+                                {% if fb.response == 'fixed' %}
+                                    {% set fixed_count.v = fixed_count.v + 1 %}
+                                {% elif fb.response == 'partially_fixed' %}
+                                    {% set partial_count.v = partial_count.v + 1 %}
+                                {% elif fb.response == 'not_fixed' %}
+                                    {% set not_fixed_count.v = not_fixed_count.v + 1 %}
+                                {% endif %}
+                            {% endfor %}
+
+                            <div class="bg-light p-2 rounded small">
+                                <div class="fw-semibold text-secondary mb-1">Aggregate Submitter Responses:</div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-success"><i class="bi bi-check-circle"></i> Fixed: <strong>{{ fixed_count.v }}</strong></span>
+                                    <span class="text-warning text-dark"><i class="bi bi-dash-circle"></i> Partial: <strong>{{ partial_count.v }}</strong></span>
+                                    <span class="text-danger"><i class="bi bi-x-circle"></i> Not Fixed: <strong>{{ not_fixed_count.v }}</strong></span>
+                                </div>
+                            </div>
+
+                            <div class="small text-muted mt-2" style="font-size: 0.78rem;">
+                                <em>Rule: All linked submitters must confirm fixed before labeled submitter-confirmed. Any partial or not-fixed response flags administrative review.</em>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted small mb-0">No resolution rounds yet. When this issue is marked Resolved, original submitters will be invited to provide verified feedback.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Manual Link Complaint -->
+        <div class="card card-shadow mb-4">
+            <div class="card-header bg-light py-2">
+                <h6 class="mb-0 text-dark fw-bold"><i class="bi bi-plus-lg me-1"></i>Link Complaint by ID</h6>
+            </div>
+            <div class="card-body p-3">
+                <form method="POST" action="{{ url_for('issues.link_complaint', issue_id=issue.id) }}">
+                    {{ link_form.hidden_tag() }}
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Complaint Reference ID</label>
+                        {{ link_form.complaint_id(class="form-control form-control-sm", placeholder="e.g. 5") }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Relationship Type</label>
+                        {{ link_form.relationship_type(class="form-select form-select-sm") }}
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                        Link Submission
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CampusVoice — Campus Complaints & Verified Resolution Feedback{% endblock %}</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            color: #212529;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .main-content {
+            flex: 1 0 auto;
+        }
+        .footer {
+            flex-shrink: 0;
+            background-color: #ffffff;
+            border-top: 1px solid #e9ecef;
+            padding: 1.5rem 0;
+            font-size: 0.9rem;
+        }
+        .badge-urgent {
+            background-color: #dc3545;
+            color: white;
+        }
+        .badge-high {
+            background-color: #fd7e14;
+            color: white;
+        }
+        .badge-normal {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .badge-low {
+            background-color: #6c757d;
+            color: white;
+        }
+        .card-shadow {
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            border: 1px solid rgba(0,0,0,0.08);
+        }
+        .banner-emergency {
+            background-color: #fff3cd;
+            border-bottom: 1px solid #ffe69c;
+            color: #664d03;
+            font-size: 0.88rem;
+            padding: 0.45rem 1rem;
+            text-align: center;
+        }
+        .banner-privacy {
+            background-color: #e7f1ff;
+            border-bottom: 1px solid #b6d4fe;
+            color: #084298;
+            font-size: 0.85rem;
+            padding: 0.35rem 1rem;
+            text-align: center;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <!-- Emergency & Operational Notices -->
+    <div class="banner-emergency">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        <strong>Emergency Notice:</strong> This portal is <strong>not</strong> an emergency-response service. For active physical safety or medical emergencies, contact campus emergency services directly.
+    </div>
+    <div class="banner-privacy">
+        <i class="bi bi-shield-lock-fill me-1"></i>
+        <strong>Privacy Architecture:</strong> Identity-restricted reporting, not guaranteed anonymity. Submitter names/emails are concealed from ordinary operational queues and require audited justification to reveal.
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand text-light" href="{{ url_for('main.index') }}">
+                <i class="bi bi-megaphone-fill text-warning me-2"></i>CampusVoice
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('main.public_issues') }}">
+                            <i class="bi bi-kanban me-1"></i>Public Issues
+                        </a>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('complaints.my_complaints') }}">
+                                <i class="bi bi-card-checklist me-1"></i>My Submissions
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link btn btn-outline-warning text-warning btn-sm ms-lg-2 px-3 my-1 my-lg-0" href="{{ url_for('complaints.new_complaint') }}">
+                                <i class="bi bi-plus-circle me-1"></i>Submit Report
+                            </a>
+                        </li>
+                        {% if current_user.is_handler %}
+                            <li class="nav-item dropdown ms-lg-3">
+                                <a class="nav-link dropdown-toggle text-info" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-gear-fill me-1"></i>Operations ({% if current_user.is_admin %}Admin{% else %}Handler{% endif %})
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-dark">
+                                    <li><a class="dropdown-item" href="{{ url_for('admin.queue') }}"><i class="bi bi-list-task me-2"></i>Complaint Queue</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('issues.create_issue') }}"><i class="bi bi-folder-plus me-2"></i>Create Issue</a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('admin.dashboard') }}"><i class="bi bi-graph-up me-2"></i>Metrics Dashboard</a></li>
+                                    {% if current_user.is_admin %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="{{ url_for('admin.audit_log') }}"><i class="bi bi-journal-text me-2"></i>Restricted Audit Log</a></li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+
+                <ul class="navbar-nav ms-auto">
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle me-1"></i>{{ current_user.full_name }}
+                                {% if current_user.is_verified %}
+                                    <span class="badge bg-success ms-1"><i class="bi bi-check-circle"></i> Verified</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark ms-1">Unverified</span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li class="dropdown-header text-muted">{{ current_user.email }} ({{ current_user.role }})</li>
+                                {% if not current_user.is_verified %}
+                                    <li><a class="dropdown-item text-warning" href="{{ url_for('auth.resend_verification') }}"><i class="bi bi-envelope-exclamation me-2"></i>Verify College Email</a></li>
+                                {% endif %}
+                                <li><a class="dropdown-item" href="{{ url_for('complaints.my_complaints') }}"><i class="bi bi-collection me-2"></i>My Complaints</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Log Out</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('auth.login') }}">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Log In
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link btn btn-primary text-white btn-sm ms-2 px-3" href="{{ url_for('auth.register') }}">
+                                Register
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Notifications -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Body Content -->
+    <main class="main-content py-4">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto">
+        <div class="container text-center">
+            <p class="mb-1 text-muted"><strong>CampusVoice</strong> — Campus Complaints with Verified Resolution Feedback</p>
+            <p class="mb-0 text-secondary small">
+                24-Hour Hackathon Project &bull; Verified College Domains Only &bull; Strict Role-Based Privacy &bull; Semantic & Rule Prioritization
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

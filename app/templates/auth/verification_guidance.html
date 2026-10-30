@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Verify Your College Email — CampusVoice{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card card-shadow mt-4">
+            <div class="card-body p-4 text-center">
+                <i class="bi bi-envelope-check text-primary" style="font-size: 3rem;"></i>
+                <h3 class="card-title mt-3">Check Your College Inbox</h3>
+                <p class="text-muted">
+                    We dispatched a single-use verification link to:
+                    <br><strong>{{ email or 'your registered college email' }}</strong>
+                </p>
+
+                <div class="alert alert-warning text-start my-4">
+                    <h6 class="alert-heading fw-bold"><i class="bi bi-gear-wide-connected me-1"></i> Hackathon / Demo SMTP Environment:</h6>
+                    <p class="small mb-2">
+                        In this demonstration environment, emails are routed through the local Mailpit SMTP server (configured on <code>localhost:1025</code>).
+                    </p>
+                    <p class="small mb-0">
+                        To view intercepted test emails and click the single-use verification token link, visit the Mailpit web interface at:
+                        <br>
+                        <a href="http://localhost:8025" target="_blank" class="fw-bold text-decoration-underline">http://localhost:8025</a>
+                    </p>
+                </div>
+
+                <div class="card bg-light border-0 text-start p-3 mb-4">
+                    <h6 class="fw-bold small text-secondary mb-2">Security & Verification Policies:</h6>
+                    <ul class="small text-secondary mb-0">
+                        <li>Complaint submissions are strictly locked until email ownership is proven.</li>
+                        <li>Tokens expire in 24 hours and are permanently invalidated once consumed.</li>
+                        <li>Raw tokens are never exposed in browser logs or server console outputs; only cryptographic hashes are stored.</li>
+                    </ul>
+                </div>
+
+                <div class="d-flex justify-content-center gap-2">
+                    <a href="{{ url_for('auth.resend_verification') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-repeat me-1"></i>Resend Link
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Proceed to Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

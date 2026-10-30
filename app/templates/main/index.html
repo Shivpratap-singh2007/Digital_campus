@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}CampusVoice — Campus Complaints with Verified Resolution Feedback{% endblock %}
+{% block content %}
+<!-- Hero Section -->
+<div class="row align-items-center py-4 mb-4">
+    <div class="col-lg-7">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-2 px-3 py-1">
+            <i class="bi bi-shield-check me-1"></i>Verified Campus Feedback & Accountability
+        </span>
+        <h1 class="display-5 fw-bold text-dark mt-2 mb-3">
+            Campus Issues Resolved With Verified Submitter Feedback.
+        </h1>
+        <p class="lead text-secondary mb-4">
+            A transparent platform for verified college students and staff to submit maintenance requests, report safety hazards, and confirm physical repairs with auditable resolution feedback.
+        </p>
+
+        <div class="d-flex flex-wrap gap-2">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('complaints.new_complaint') }}" class="btn btn-primary btn-lg px-4">
+                    <i class="bi bi-plus-circle me-1"></i>Submit New Report
+                </a>
+                <a href="{{ url_for('complaints.my_complaints') }}" class="btn btn-outline-secondary btn-lg px-4">
+                    My Submissions
+                </a>
+            {% else %}
+                <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg px-4">
+                    Register with College Email
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-4">
+                    Log In
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Live Metrics -->
+    <div class="col-lg-5 mt-4 mt-lg-0">
+        <div class="card card-shadow border-0 bg-white p-4">
+            <h5 class="fw-bold text-dark mb-3"><i class="bi bi-activity text-primary me-2"></i>Live Campus Activity</h5>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <span class="text-secondary">Total Submissions Received</span>
+                <span class="badge bg-secondary fs-6">{{ total_submissions }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                <span class="text-secondary">Distinct Operational Issues</span>
+                <span class="badge bg-primary fs-6">{{ distinct_issues }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2">
+                <span class="text-secondary">Issues Successfully Resolved</span>
+                <span class="badge bg-success fs-6">{{ resolved_issues }}</span>
+            </div>
+            <div class="mt-3 text-center">
+                <a href="{{ url_for('main.public_issues') }}" class="btn btn-sm btn-outline-primary w-100">
+                    View Public Issue Board
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Architecture & Principles Highlights -->
+<div class="row g-4 py-3 mb-5">
+    <div class="col-md-4">
+        <div class="card card-shadow h-100 p-3">
+            <div class="card-body">
+                <i class="bi bi-patch-check-fill text-success fs-1 mb-2"></i>
+                <h5 class="card-title fw-bold">Verified Resolution Feedback</h5>
+                <p class="card-text text-muted small">
+                    An issue is not labeled "confirmed resolved" merely by administrative say-so. Original verified submitters vote whether the fix was successful, preventing premature ticket closures.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow h-100 p-3">
+            <div class="card-body">
+                <i class="bi bi-eye-slash-fill text-primary fs-1 mb-2"></i>
+                <h5 class="card-title fw-bold">Identity-Restricted Privacy</h5>
+                <p class="card-text text-muted small">
+                    Submitter identities are concealed on ordinary operational dashboards to protect students from retaliation. Administrators must supply an auditable operational justification to reveal identity.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card card-shadow h-100 p-3">
+            <div class="card-body">
+                <i class="bi bi-diagram-3-fill text-warning fs-1 mb-2"></i>
+                <h5 class="card-title fw-bold">Semantic Clustering & Reversible Grouping</h5>
+                <p class="card-text text-muted small">
+                    Multilingual text embeddings and structured campus location matching surface duplicate or recurring reports. Reports are never deleted as duplicates; grouping is completely reversible.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Public Synthesized Issues Board -->
+<div class="card card-shadow mb-4">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0 text-dark"><i class="bi bi-kanban me-2"></i>Synthesized Campus Issues (Public Board)</h5>
+            <small class="text-muted">Displays authorized operational summaries only. Raw personal descriptions and attachments remain restricted.</small>
+        </div>
+        <a href="{{ url_for('main.public_issues') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        {% if public_issues %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 80px;">Issue</th>
+                            <th>Summary Title</th>
+                            <th>Location</th>
+                            <th>Category</th>
+                            <th>Priority</th>
+                            <th>Operational Status</th>
+                            <th>Submitter Feedback State</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for issue in public_issues %}
+                            <tr>
+                                <td><strong>#{{ issue.id }}</strong></td>
+                                <td>
+                                    <div class="fw-semibold text-dark">{{ issue.title }}</div>
+                                    <small class="text-muted">{{ issue.description[:120] }}...</small>
+                                </td>
+                                <td>
+                                    <div>{{ issue.building }}</div>
+                                    {% if issue.room %}<small class="text-muted">{{ issue.room }}</small>{% endif %}
+                                </td>
+                                <td><span class="badge bg-light text-dark border">{{ issue.category }}</span></td>
+                                <td>
+                                    <span class="badge {% if issue.priority == 'Urgent review' %}badge-urgent{% elif issue.priority == 'High' %}badge-high{% else %}badge-normal{% endif %}">
+                                        {{ issue.priority }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if issue.status == 'resolved' %}
+                                        <span class="badge bg-success"><i class="bi bi-check2-circle"></i> Resolved</span>
+                                    {% elif issue.status == 'in_progress' %}
+                                        <span class="badge bg-info text-dark">In Progress</span>
+                                    {% elif issue.status == 'under_review' %}
+                                        <span class="badge bg-warning text-dark">Under Review</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Submitted</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if issue.current_resolution_round %}
+                                        {% set round_st = issue.current_resolution_round.status %}
+                                        {% if round_st == 'submitter_confirmed' %}
+                                            <span class="badge bg-success"><i class="bi bi-check-all"></i> Submitter Confirmed</span>
+                                        {% elif round_st == 'disputed' %}
+                                            <span class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> Disputed</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Awaiting Feedback</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="p-4 text-center text-muted">
+                No synthesized public issues recorded yet.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

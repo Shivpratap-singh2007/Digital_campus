@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Access Denied — CampusVoice{% endblock %}
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-6 text-center">
+        <div class="card card-shadow p-5">
+            <h1 class="display-3 text-danger"><i class="bi bi-shield-x"></i> 403</h1>
+            <h3 class="mb-3">Access Denied</h3>
+            <p class="text-muted">You do not have the required role or authorization to access this operational screen. Identity reveal actions and restricted logs require elevated administrator permissions.</p>
+            <div class="mt-4">
+                <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary me-2">Return Home</a>
+                <a href="{{ url_for('complaints.my_complaints') }}" class="btn btn-primary">My Submissions</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

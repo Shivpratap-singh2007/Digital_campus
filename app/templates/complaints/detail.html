@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}Complaint #{{ complaint.id }} — CampusVoice{% endblock %}
+{% block content %}
+<div class="mb-3">
+    <a href="{{ url_for('complaints.my_complaints') }}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Back to Submissions
+    </a>
+</div>
+
+<div class="row">
+    <!-- Left Column: Details, Image, and Resolution Feedback -->
+    <div class="col-lg-8">
+        <div class="card card-shadow mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-secondary text-capitalize me-2">{{ complaint.submission_type }}</span>
+                    <span class="text-muted small">Report #{{ complaint.id }}</span>
+                </div>
+                <div>
+                    {% if complaint.status == 'resolved' %}
+                        <span class="badge bg-success fs-6"><i class="bi bi-check2-circle"></i> Resolved</span>
+                    {% elif complaint.status == 'in_progress' %}
+                        <span class="badge bg-info text-dark fs-6">In Progress</span>
+                    {% elif complaint.status == 'under_review' %}
+                        <span class="badge bg-warning text-dark fs-6">Under Review</span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6">Submitted</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <h3 class="card-title text-dark mb-3">{{ complaint.title }}</h3>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-geo-alt me-1"></i>{{ complaint.building }}
+                        {% if complaint.room %} &bull; {{ complaint.room }}{% endif %}
+                    </span>
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-tag me-1"></i>Category: {{ complaint.display_category }}
+                    </span>
+                    <span class="badge {% if complaint.display_priority == 'Urgent review' %}badge-urgent{% elif complaint.display_priority == 'High' %}badge-high{% else %}badge-normal{% endif %}">
+                        <i class="bi bi-flag-fill me-1"></i>Priority: {{ complaint.display_priority }}
+                    </span>
+                </div>
+
+                <div class="card bg-light border-0 p-3 mb-4">
+                    <h6 class="text-secondary small fw-bold text-uppercase mb-2">Original Submission Description</h6>
+                    <p class="mb-0 text-dark" style="white-space: pre-wrap;">{{ complaint.description }}</p>
+                </div>
+
+                <!-- Attachment (if present) -->
+                {% if complaint.attachments %}
+                    <div class="mb-4">
+                        <h6 class="fw-semibold text-secondary"><i class="bi bi-paperclip me-1"></i>Verified Photo Attachment</h6>
+                        {% for att in complaint.attachments %}
+                            <div class="border rounded p-2 d-inline-block bg-white text-center">
+                                <a href="{{ url_for('complaints.serve_attachment', filename=att.filename) }}" target="_blank">
+                                    <img src="{{ url_for('complaints.serve_attachment', filename=att.filename) }}" alt="Complaint attachment" class="img-fluid rounded" style="max-height: 280px; object-fit: contain;">
+                                </a>
+                                <div class="small text-muted mt-1">
+                                    {{ att.original_filename }} ({{ (att.file_size / 1024)|round(1) }} KB)
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Resolution Feedback Section (If issue is resolved) -->
+                {% if linked_issue and linked_issue.status == 'resolved' %}
+                    <div id="feedback-section" class="card border-success mt-4">
+                        <div class="card-header bg-success text-white py-2">
+                            <h5 class="mb-0"><i class="bi bi-patch-check-fill me-2"></i>Verified Resolution Feedback</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Campus facilities marked this issue as resolved. As the original verified submitter, please confirm whether the physical repair or solution was successful.
+                            </p>
+
+                            {% if existing_feedback %}
+                                <div class="alert alert-info py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>Your Recorded Feedback:</strong>
+                                            <span class="badge {% if existing_feedback.response == 'fixed' %}bg-success{% elif existing_feedback.response == 'partially_fixed' %}bg-warning text-dark{% else %}bg-danger{% endif %} ms-2 text-capitalize">
+                                                {{ existing_feedback.response.replace('_', ' ') }}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">{{ existing_feedback.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                    </div>
+                                    {% if existing_feedback.comments %}
+                                        <p class="small text-muted mt-2 mb-0"><em>"{{ existing_feedback.comments }}"</em></p>
+                                    {% endif %}
+                                </div>
+                                <p class="small text-muted mb-3">You may update your response for this resolution cycle below:</p>
+                            {% endif %}
+
+                            {% if feedback_form %}
+                                <form method="POST" action="{{ url_for('feedback.submit_feedback', issue_id=linked_issue.id) }}">
+                                    {{ feedback_form.hidden_tag() }}
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">{{ feedback_form.response.label }}</label>
+                                        {% for subfield in feedback_form.response %}
+                                            <div class="form-check my-2">
+                                                {{ subfield(class="form-check-input") }}
+                                                {{ subfield.label(class="form-check-label") }}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">{{ feedback_form.comments.label }}</label>
+                                        {{ feedback_form.comments(class="form-control", rows=2, placeholder="Provide any details about the current state of the issue...") }}
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="bi bi-check2-circle me-1"></i>Submit Verified Rating
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Status Progression History -->
+        <div class="card card-shadow mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 text-dark"><i class="bi bi-clock-history me-2"></i>Status Progression & Audit Events</h5>
+            </div>
+            <div class="card-body">
+                {% if status_events %}
+                    <ul class="list-group list-group-flush">
+                        {% for ev in status_events %}
+                            <li class="list-group-item px-0 py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="badge bg-secondary text-capitalize me-2">{{ ev.new_status }}</span>
+                                        <span class="text-dark">{{ ev.note }}</span>
+                                    </div>
+                                    <small class="text-muted">{{ ev.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted small mb-0">No status updates recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: AI & Rule-based Diagnostics -->
+    <div class="col-lg-4">
+        <div class="card card-shadow mb-4">
+            <div class="card-header bg-light py-2">
+                <h6 class="mb-0 text-dark fw-bold"><i class="bi bi-cpu me-1"></i>Semantic & Rule Diagnostics</h6>
+            </div>
+            <div class="card-body">
+                {% if complaint.analysis_result %}
+                    {% set ar = complaint.analysis_result %}
+
+                    <!-- Semantic Categorization -->
+                    <div class="mb-3">
+                        <label class="small text-muted text-uppercase fw-bold">Category Evaluation</label>
+                        <div class="small">
+                            <div><strong>User Selected:</strong> {{ complaint.user_category }}</div>
+                            <div>
+                                <strong>AI Suggested:</strong>
+                                {% if ar.suggested_category %}
+                                    <span class="text-primary">{{ ar.suggested_category }}</span>
+                                    {% if ar.category_similarity %}
+                                        <span class="badge bg-light text-dark border ms-1">Score: {{ ar.category_similarity }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">None (Model unavailable)</span>
+                                {% endif %}
+                            </div>
+                            <div><strong>Final Assigned:</strong> <span class="badge bg-info text-dark">{{ complaint.display_category }}</span></div>
+                        </div>
+                        <div class="text-muted small mt-1"><em>{{ ar.category_reason }}</em></div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Priority Rules Engine -->
+                    <div class="mb-3">
+                        <label class="small text-muted text-uppercase fw-bold">Deterministic Priority Rule</label>
+                        <div class="small">
+                            <div>
+                                <strong>Suggested:</strong>
+                                <span class="badge {% if ar.suggested_priority == 'Urgent review' %}badge-urgent{% elif ar.suggested_priority == 'High' %}badge-high{% else %}badge-normal{% endif %}">
+                                    {{ ar.suggested_priority }}
+                                </span>
+                            </div>
+                            {% if ar.matched_phrase %}
+                                <div class="mt-1">
+                                    <strong>Matched Phrase:</strong> <code>{{ ar.matched_phrase }}</code>
+                                </div>
+                            {% endif %}
+                            <div class="mt-1 text-muted">
+                                <strong>Rule Rationale:</strong> {{ ar.priority_reason }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Model Metadata -->
+                    <div class="small text-muted">
+                        <div><strong>Engine Model:</strong> <code>{{ ar.model_identifier }}</code></div>
+                        <div><strong>Rule Version:</strong> v{{ ar.analysis_version }}</div>
+                        <div class="mt-1">
+                            <strong>State:</strong>
+                            {% if complaint.analysis_state == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif complaint.analysis_state == 'needs_review' %}
+                                <span class="badge bg-warning text-dark">Needs Review</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ complaint.analysis_state }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                {% else %}
+                    <p class="text-muted small mb-0">Analysis is pending or was not executed.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Issue Link Card (if linked) -->
+        {% if linked_issue %}
+            <div class="card card-shadow mb-4 border-primary">
+                <div class="card-header bg-primary text-white py-2">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-diagram-3-fill me-1"></i>Linked Master Issue</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="card-title text-primary">
+                        <a href="{{ url_for('issues.detail', issue_id=linked_issue.id) }}" class="text-decoration-none">
+                            Issue #{{ linked_issue.id }}: {{ linked_issue.title }}
+                        </a>
+                    </h6>
+                    <p class="small text-muted mb-2">{{ linked_issue.description[:150] }}...</p>
+                    <div class="small">
+                        <div><strong>Status:</strong> <span class="badge bg-secondary text-capitalize">{{ linked_issue.status }}</span></div>
+                        <div><strong>Relationship:</strong> <code>{{ complaint.issue_link.relationship_type }}</code></div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

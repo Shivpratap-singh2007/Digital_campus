@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Server Error — CampusVoice{% endblock %}
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-6 text-center">
+        <div class="card card-shadow p-5">
+            <h1 class="display-3 text-warning"><i class="bi bi-exclamation-triangle"></i> 500</h1>
+            <h3 class="mb-3">Internal Server Error</h3>
+            <p class="text-muted">An unexpected error occurred while processing your request. Please try again or notify campus IT support if the issue persists.</p>
+            <div class="mt-4">
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary">Return to Homepage</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Create Synthesized Issue — CampusVoice{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card card-shadow">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h4 class="mb-0 text-primary">
+                    <i class="bi bi-folder-plus me-2"></i>Synthesize Operational Issue
+                </h4>
+                <p class="text-muted small mb-0 mt-1">
+                    An issue consolidates related complaints into an addressable campus task without modifying original submissions.
+                </p>
+            </div>
+            <div class="card-body p-4">
+                {% if seed_complaint %}
+                    <div class="alert alert-info py-2 small mb-4">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Initializing master issue from Complaint <strong>#{{ seed_complaint.id }}</strong> (<em>{{ seed_complaint.title }}</em>).
+                    </div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('issues.create_issue', from_complaint=seed_complaint.id if seed_complaint else None) }}">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">{{ form.title.label }} <span class="text-danger">*</span></label>
+                        {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else "")) }}
+                        {% for err in form.title.errors %}
+                            <div class="invalid-feedback">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.category.label }} <span class="text-danger">*</span></label>
+                            {{ form.category(class="form-select" + (" is-invalid" if form.category.errors else "")) }}
+                            {% for err in form.category.errors %}
+                                <div class="invalid-feedback">{{ err }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.priority.label }} <span class="text-danger">*</span></label>
+                            {{ form.priority(class="form-select" + (" is-invalid" if form.priority.errors else "")) }}
+                            {% for err in form.priority.errors %}
+                                <div class="invalid-feedback">{{ err }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.building.label }} <span class="text-danger">*</span></label>
+                            {{ form.building(class="form-select" + (" is-invalid" if form.building.errors else "")) }}
+                            {% for err in form.building.errors %}
+                                <div class="invalid-feedback">{{ err }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">{{ form.room.label }}</label>
+                            {{ form.room(class="form-control" + (" is-invalid" if form.room.errors else "")) }}
+                            {% for err in form.room.errors %}
+                                <div class="invalid-feedback">{{ err }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">{{ form.description.label }} <span class="text-danger">*</span></label>
+                        {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""), rows=4) }}
+                        <div class="form-text text-muted">{{ form.description.description }}</div>
+                        {% for err in form.description.errors %}
+                            <div class="invalid-feedback">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <a href="{{ url_for('admin.queue') }}" class="btn btn-outline-secondary">Cancel</a>
+                        {{ form.submit(class="btn btn-primary px-4") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
