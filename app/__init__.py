@@ -41,19 +41,26 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
     app.register_blueprint(cli_bp)
 
-    # Single-origin production/demo serving for built React SPA
-    frontend_dist = os.path.join(app.root_path, "..", "frontend", "dist")
+    # Static assets and SPA routes for built React frontend
+    frontend_dist = os.path.abspath(os.path.join(app.root_path, "..", "frontend", "dist"))
     if os.path.exists(frontend_dist):
-        from flask import send_from_directory
+        @app.route("/assets/<path:path>")
+        def serve_react_assets(path):
+            assets_dir = os.path.join(frontend_dist, "assets")
+            return send_from_directory(assets_dir, path)
 
-        @app.route("/", defaults={"path": ""})
-        @app.route("/<path:path>")
-        def serve_react_spa(path):
-            if path.startswith("api/") or path.startswith("auth/") or path.startswith("complaints/") or path.startswith("issues/") or path.startswith("admin/"):
-                return abort(404)
-            file_path = os.path.join(frontend_dist, path)
-            if path and os.path.exists(file_path):
-                return send_from_directory(frontend_dist, path)
+        @app.route("/login")
+        @app.route("/register")
+        @app.route("/verify-email")
+        @app.route("/my-complaints")
+        @app.route("/new-complaint")
+        @app.route("/complaints/<int:complaint_id>")
+        @app.route("/admin/queue")
+        @app.route("/admin/create-issue")
+        @app.route("/admin/issues/<int:issue_id>")
+        @app.route("/admin/dashboard")
+        @app.route("/admin/audit-log")
+        def serve_react_pages(**kwargs):
             return send_from_directory(frontend_dist, "index.html")
 
     # Context processors

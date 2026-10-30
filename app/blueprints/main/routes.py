@@ -1,4 +1,5 @@
-from flask import render_template
+import os
+from flask import render_template, current_app, send_from_directory
 from app.blueprints.main import main_bp
 from app.models.issue import Issue
 from app.models.complaint import Complaint
@@ -6,8 +7,10 @@ from app.models.complaint import Complaint
 
 @main_bp.route("/")
 def index():
-    # Public views show synthesized issue summaries only!
-    # No raw descriptions, attachments, or submitter personal info.
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     public_issues = (
         Issue.query.order_by(Issue.created_at.desc())
         .limit(10)
@@ -28,5 +31,9 @@ def index():
 
 @main_bp.route("/public-issues")
 def public_issues():
+    frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
+    if os.path.exists(frontend_dist):
+        return send_from_directory(frontend_dist, "index.html")
+
     issues = Issue.query.order_by(Issue.created_at.desc()).all()
     return render_template("main/public_issues.html", issues=issues)
