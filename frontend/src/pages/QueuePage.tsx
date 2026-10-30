@@ -81,47 +81,54 @@ export const QueuePage: React.FC = () => {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      {/* Header */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-          <h3 className="mb-1 text-dark">
-            <i className="bi bi-list-task me-2"></i>Campus Operations & Complaints Queue
-          </h3>
+          <div className="d-flex align-items-center gap-2 mb-1">
+            <h3 className="mb-0 fw-bold">Operations & Complaints Queue</h3>
+            <span className="cv-badge cv-badge-low">{complaints.length} Records</span>
+          </div>
           <p className="text-muted small mb-0">
-            Submitter identities are concealed in this view. Use audited reveal actions only when required for safety follow-up.
+            Submitter identities remain concealed. Audited reveal actions are strictly restricted to safety emergencies.
           </p>
         </div>
-        <Link to="/admin/create-issue" className="btn btn-outline-primary">
-          <i className="bi bi-plus-circle me-1"></i>Create Synthesized Issue
+        <Link to="/admin/create-issue" className="btn btn-primary d-inline-flex align-items-center gap-2">
+          <i className="bi bi-folder-plus"></i>
+          <span>Synthesize Issue</span>
         </Link>
       </div>
 
+      {/* Disclosed Identity Result Banner */}
       {revealResult && (
-        <div className="alert alert-warning alert-dismissible fade show mb-4" role="alert">
-          <h6 className="alert-heading fw-bold">
-            <i className="bi bi-shield-lock-fill me-1"></i>Disclosed Submitter Identity (Logged under Audit Event #{revealResult.audit_id})
-          </h6>
-          <p className="mb-0 small">
-            <strong>Full Name:</strong> {revealResult.full_name} &bull;{' '}
-            <strong>Email:</strong> {revealResult.email} &bull;{' '}
-            <strong>User ID:</strong> #{revealResult.user_id}
-          </p>
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setRevealResult(null)}
-            aria-label="Close"
-          ></button>
+        <div className="cv-card mb-4 border-warning bg-white">
+          <div className="cv-card-body p-3 d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center gap-2">
+              <i className="bi bi-shield-check text-warning fs-5"></i>
+              <div>
+                <strong className="text-dark">Disclosed Submitter Identity (Audit Event #{revealResult.audit_id}):</strong>
+                <div className="small text-secondary mt-1">
+                  Name: <strong>{revealResult.full_name}</strong> &bull; Email: <strong>{revealResult.email}</strong> &bull; User ID: #{revealResult.user_id}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-outline-secondary btn-sm"
+              onClick={() => setRevealResult(null)}
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 
       {/* Filter Toolbar */}
-      <div className="card card-shadow mb-4">
-        <div className="card-body p-3">
-          <div className="row g-2 align-items-end">
+      <div className="cv-card mb-4">
+        <div className="cv-card-body p-3">
+          <div className="row g-2 align-items-center">
             <div className="col-md-3">
-              <label className="form-label small fw-semibold">Category</label>
               <select
-                className="form-select form-select-sm"
+                className="form-select"
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
               >
@@ -132,9 +139,8 @@ export const QueuePage: React.FC = () => {
               </select>
             </div>
             <div className="col-md-3">
-              <label className="form-label small fw-semibold">Building / Location</label>
               <select
-                className="form-select form-select-sm"
+                className="form-select"
                 value={filterBuilding}
                 onChange={(e) => setFilterBuilding(e.target.value)}
               >
@@ -145,9 +151,8 @@ export const QueuePage: React.FC = () => {
               </select>
             </div>
             <div className="col-md-2">
-              <label className="form-label small fw-semibold">Status</label>
               <select
-                className="form-select form-select-sm"
+                className="form-select"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
@@ -159,9 +164,8 @@ export const QueuePage: React.FC = () => {
               </select>
             </div>
             <div className="col-md-2">
-              <label className="form-label small fw-semibold">Priority</label>
               <select
-                className="form-select form-select-sm"
+                className="form-select"
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value)}
               >
@@ -175,7 +179,7 @@ export const QueuePage: React.FC = () => {
             <div className="col-md-2">
               <button
                 type="button"
-                className="btn btn-outline-secondary btn-sm w-100"
+                className="btn btn-outline-secondary w-100"
                 onClick={() => {
                   setFilterCategory('');
                   setFilterBuilding('');
@@ -183,7 +187,7 @@ export const QueuePage: React.FC = () => {
                   setFilterPriority('');
                 }}
               >
-                <i className="bi bi-arrow-counterclockwise me-1"></i>Reset
+                Reset Filters
               </button>
             </div>
           </div>
@@ -192,83 +196,104 @@ export const QueuePage: React.FC = () => {
 
       {/* Queue Table */}
       {loading ? (
-        <div className="card card-shadow p-5 text-center text-muted">
+        <div className="cv-card p-5 text-center text-muted">
+          <div className="spinner-border spinner-border-sm text-secondary me-2" role="status"></div>
           Loading operations queue...
         </div>
       ) : complaints.length > 0 ? (
-        <div className="card card-shadow">
+        <div className="cv-card overflow-hidden">
           <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0">
-              <thead className="table-light">
+            <table className="cv-table">
+              <thead>
                 <tr>
                   <th style={{ width: '70px' }}>ID</th>
                   <th>Type & Title</th>
-                  <th>Submitter Reference</th>
+                  <th>Submitter Privacy</th>
                   <th>Location</th>
                   <th>Category</th>
                   <th>Priority</th>
                   <th>Status / AI</th>
-                  <th className="text-end" style={{ minWidth: '150px' }}>Actions</th>
+                  <th className="text-end" style={{ minWidth: '140px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {complaints.map((c) => (
                   <tr key={c.id}>
-                    <td><strong>#{c.id}</strong></td>
                     <td>
-                      <div>
-                        <span className="badge bg-secondary text-capitalize me-1">{c.submission_type}</span>
-                        <Link to={`/complaints/${c.id}`} className="fw-semibold text-decoration-none">
+                      <span className="font-monospace fw-semibold text-secondary">#{c.id}</span>
+                    </td>
+                    <td style={{ maxWidth: '280px' }}>
+                      <div className="d-flex align-items-center gap-1 mb-1">
+                        <span className="cv-badge cv-badge-low text-capitalize" style={{ fontSize: '0.7rem' }}>
+                          {c.submission_type}
+                        </span>
+                        <Link
+                          to={`/complaints/${c.id}`}
+                          className="fw-semibold text-dark text-decoration-none text-truncate"
+                          style={{ maxWidth: '220px' }}
+                        >
                           {c.title}
                         </Link>
                       </div>
-                      <small className="text-muted">
-                        {new Date(c.created_at).toLocaleString()}
-                      </small>
+                      <div className="text-muted small">
+                        {new Date(c.created_at).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </div>
                     </td>
                     <td>
-                      {/* Submitter Identity Concealed */}
-                      <span className="badge bg-secondary-subtle text-secondary border">
-                        <i className="bi bi-person-lock me-1"></i>{c.anonymous_submitter}
+                      <span className="cv-badge cv-badge-low" title="Concealed for submitter privacy">
+                        <i className="bi bi-lock me-1"></i>
+                        {c.anonymous_submitter}
                       </span>
                     </td>
                     <td>
-                      <div>{c.building}</div>
-                      {c.room && <small className="text-muted">{c.room}</small>}
+                      <div className="fw-medium text-dark">{c.building}</div>
+                      {c.room && <div className="text-muted small">{c.room}</div>}
                     </td>
                     <td>
-                      <div><span className="badge bg-light text-dark border">{c.display_category}</span></div>
+                      <span className="cv-badge cv-badge-low">{c.display_category}</span>
                       {c.suggested_category && c.suggested_category !== c.user_category && (
-                        <small className="text-primary d-block">AI: {c.suggested_category}</small>
+                        <div className="text-primary small mt-1" style={{ fontSize: '0.75rem' }}>
+                          AI: {c.suggested_category}
+                        </div>
                       )}
                     </td>
-                    <td><StatusBadge type="priority" value={c.display_priority} /></td>
+                    <td>
+                      <StatusBadge type="priority" value={c.display_priority} />
+                    </td>
                     <td>
                       <div><StatusBadge type="status" value={c.status} /></div>
-                      <small className="text-muted">
+                      <div className="text-muted small mt-1" style={{ fontSize: '0.75rem' }}>
                         {c.analysis_state === 'needs_review' ? (
                           <span className="text-danger fw-semibold">Needs Review</span>
                         ) : (
                           c.analysis_state
                         )}
-                      </small>
+                      </div>
                     </td>
                     <td className="text-end">
-                      <div className="btn-group btn-group-sm">
-                        <Link to={`/complaints/${c.id}`} className="btn btn-outline-primary" title="View details">
+                      <div className="d-inline-flex gap-1">
+                        <Link
+                          to={`/complaints/${c.id}`}
+                          className="btn btn-outline-secondary btn-sm"
+                          title="View submission details"
+                        >
                           View
                         </Link>
                         <Link
                           to={`/admin/create-issue?seed_id=${c.id}`}
-                          className="btn btn-outline-secondary"
-                          title="Create master issue"
+                          className="btn btn-outline-secondary btn-sm"
+                          title="Synthesize into Master Issue"
                         >
                           <i className="bi bi-folder-plus"></i>
                         </Link>
                         <button
                           type="button"
-                          className="btn btn-outline-info"
-                          title="Re-run AI analysis"
+                          className="btn btn-outline-secondary btn-sm"
+                          title="Re-run AI Analysis"
                           onClick={() => handleRetryAnalysis(c.id)}
                         >
                           <i className="bi bi-arrow-repeat"></i>
@@ -276,8 +301,8 @@ export const QueuePage: React.FC = () => {
                         {user?.is_admin && (
                           <button
                             type="button"
-                            className="btn btn-outline-danger"
-                            title="Reveal submitter identity (audited)"
+                            className="btn btn-outline-secondary btn-sm text-danger"
+                            title="Reveal Submitter Identity (Audited)"
                             onClick={() => {
                               setSelectedComplaintId(c.id);
                               setJustification('');
@@ -296,64 +321,76 @@ export const QueuePage: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="card card-shadow text-center p-5">
-          <i className="bi bi-check-circle text-success" style={{ fontSize: '3rem' }}></i>
-          <h5 className="mt-3">No Complaints Match Filters</h5>
-          <p className="text-muted small">All operational queues are clear or no complaints match current filter settings.</p>
+        <div className="cv-card text-center p-5">
+          <div className="text-muted mb-2">
+            <i className="bi bi-check2-circle" style={{ fontSize: '2.5rem' }}></i>
+          </div>
+          <h5 className="fw-semibold text-dark mb-1">Queue is Clear</h5>
+          <p className="text-muted small mb-0">
+            No complaints currently match the selected filter criteria.
+          </p>
         </div>
       )}
 
-      {/* Identity Reveal Modal (Admin Only) */}
+      {/* Audited Identity Reveal Modal */}
       {selectedComplaintId && (
-        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(15, 23, 42, 0.4)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content cv-card shadow-lg">
               <form onSubmit={handleRevealIdentity}>
-                <div className="modal-header bg-danger text-white">
-                  <h5 className="modal-title">
-                    <i className="bi bi-shield-lock-fill me-2"></i>Restricted Identity Disclosure
-                  </h5>
+                <div className="cv-card-header d-flex justify-content-between align-items-center">
+                  <div className="d-flex align-items-center gap-2">
+                    <i className="bi bi-shield-lock text-danger"></i>
+                    <h5 className="modal-title mb-0 fw-bold">Restricted Identity Disclosure</h5>
+                  </div>
                   <button
                     type="button"
-                    className="btn-close btn-close-white"
+                    className="btn-close"
                     onClick={() => setSelectedComplaintId(null)}
                   ></button>
                 </div>
-                <div className="modal-body text-start">
-                  <div className="alert alert-warning small">
-                    <strong>Audit Warning:</strong> Disclosing submitter identity is strictly monitored. An immutable <code>AuditEvent</code> with your administrator ID, timestamp, and justification will be recorded before disclosure.
+
+                <div className="cv-card-body p-4 text-start">
+                  <div className="alert alert-warning small mb-3">
+                    <strong>Mandatory Audit Trail:</strong> Submitter identities are legally protected under campus policy. An immutable <code>AuditEvent</code> with your administrator ID, timestamp, and justification will be recorded before disclosure.
                   </div>
-                  <p className="small text-muted mb-3">
-                    Complaint #{selectedComplaintId}
-                  </p>
-                  {revealError && <div className="alert alert-danger py-2 small">{revealError}</div>}
+
+                  <div className="text-muted small mb-3">
+                    Target Submission: <strong>Report #{selectedComplaintId}</strong>
+                  </div>
+
+                  {revealError && <div className="alert alert-danger py-2 small mb-3">{revealError}</div>}
+
                   <div className="mb-3">
-                    <label className="form-label fw-semibold small">Operational Justification (Required):</label>
+                    <label className="form-label">
+                      Operational Justification (Required) <span className="text-danger">*</span>
+                    </label>
                     <textarea
                       className="form-control"
                       rows={3}
                       required
                       minLength={10}
-                      placeholder="State the specific administrative purpose (e.g., Immediate safety follow-up for electrical hazard in lab)..."
+                      placeholder="Specify the operational purpose (e.g., Immediate safety follow-up for electrical hazard)..."
                       value={justification}
                       onChange={(e) => setJustification(e.target.value)}
                     />
                   </div>
                 </div>
-                <div className="modal-footer">
+
+                <div className="cv-card-header bg-white d-flex justify-content-end gap-2 border-top">
                   <button
                     type="button"
-                    className="btn btn-secondary btn-sm"
+                    className="btn btn-outline-secondary btn-sm"
                     onClick={() => setSelectedComplaintId(null)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-danger btn-sm"
+                    className="btn btn-primary btn-sm"
                     disabled={revealSubmitting}
                   >
-                    {revealSubmitting ? 'Recording Audit...' : 'Confirm & Record Audit'}
+                    {revealSubmitting ? 'Recording Audit...' : 'Confirm & Commit Audit'}
                   </button>
                 </div>
               </form>
@@ -364,4 +401,3 @@ export const QueuePage: React.FC = () => {
     </div>
   );
 };
-

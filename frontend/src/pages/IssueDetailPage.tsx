@@ -99,15 +99,25 @@ export const IssueDetailPage: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="p-5 text-center text-muted">Loading issue details...</div>;
+  if (loading) {
+    return (
+      <div className="cv-card p-5 text-center text-muted">
+        <div className="spinner-border spinner-border-sm text-secondary me-2" role="status"></div>
+        Loading issue details...
+      </div>
+    );
+  }
 
   if (error || !issue) {
     return (
-      <div className="alert alert-danger my-4">
-        {error || 'Issue not found.'}
-        <div className="mt-2">
-          <Link to="/admin/queue" className="btn btn-sm btn-outline-danger">
-            Back to Queue
+      <div className="cv-card p-4 text-center my-4">
+        <div className="text-danger mb-2">
+          <i className="bi bi-exclamation-triangle" style={{ fontSize: '2rem' }}></i>
+        </div>
+        <h5 className="fw-semibold text-dark">{error || 'Issue Not Found'}</h5>
+        <div className="mt-3">
+          <Link to="/admin/queue" className="btn btn-outline-secondary btn-sm">
+            Back to Operations Queue
           </Link>
         </div>
       </div>
@@ -116,19 +126,20 @@ export const IssueDetailPage: React.FC = () => {
 
   return (
     <div>
+      {/* Back Link */}
       <div className="mb-3">
-        <Link to="/admin/queue" className="text-decoration-none text-muted small">
+        <Link to="/admin/queue" className="text-decoration-none text-muted small d-inline-flex align-items-center gap-1">
           <i className="bi bi-arrow-left"></i> Back to Complaints Queue
         </Link>
       </div>
 
-      <div className="row">
+      <div className="row g-4">
         {/* Left Column: Details & Linked Submissions */}
         <div className="col-lg-8">
-          <div className="card card-shadow mb-4">
-            <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-              <div>
-                <span className="badge bg-primary me-2">Master Issue #{issue.id}</span>
+          <div className="cv-card mb-4">
+            <div className="cv-card-header d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-2">
+                <span className="cv-badge cv-badge-low fw-bold">Master Issue #{issue.id}</span>
                 <span className="text-muted small">
                   Created {new Date(issue.created_at).toLocaleString()}
                 </span>
@@ -137,52 +148,54 @@ export const IssueDetailPage: React.FC = () => {
                 <StatusBadge type="status" value={issue.status} />
               </div>
             </div>
-            <div className="card-body p-4">
-              <h3 className="card-title text-dark mb-3">{issue.title}</h3>
 
-              <div className="d-flex flex-wrap gap-2 mb-3">
-                <span className="badge bg-light text-dark border">
+            <div className="cv-card-body p-4">
+              <h3 className="fw-bold text-dark mb-3">{issue.title}</h3>
+
+              <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
+                <span className="cv-badge cv-badge-low">
                   <i className="bi bi-geo-alt me-1"></i>
-                  {issue.building} {issue.room && `• ${issue.room}`}
+                  {issue.building} {issue.room && `· ${issue.room}`}
                 </span>
-                <span className="badge bg-light text-dark border">
-                  <i className="bi bi-tag me-1"></i>Category: {issue.category}
+                <span className="cv-badge cv-badge-low">
+                  <i className="bi bi-tag me-1"></i>
+                  {issue.category}
                 </span>
                 <StatusBadge type="priority" value={issue.priority} />
               </div>
 
-              <div className="p-3 bg-light rounded mb-4">
-                <h6 className="text-secondary small fw-bold text-uppercase mb-2">
+              <div className="p-3 rounded mb-4" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                <div className="text-uppercase fw-bold text-muted mb-2" style={{ fontSize: '0.72rem', letterSpacing: '0.05em' }}>
                   Synthesized Public Summary
-                </h6>
-                <p className="mb-0 text-dark" style={{ whiteSpace: 'pre-wrap' }}>
+                </div>
+                <p className="mb-0 text-dark" style={{ whiteSpace: 'pre-wrap', fontSize: '0.92rem', lineHeight: '1.6' }}>
                   {issue.description}
                 </p>
               </div>
 
-              {/* Linked Complaints List */}
+              {/* Linked Submissions */}
               <div className="mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <h5 className="mb-0 text-dark">
-                    <i className="bi bi-link-45deg me-1"></i>Linked Submissions ({issue.linked_complaints?.length || 0})
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="mb-0 fw-semibold text-dark">
+                    Linked Submissions ({issue.linked_complaints?.length || 0})
                   </h5>
-                  <small className="text-muted">Original reports are preserved intact.</small>
+                  <span className="text-muted small">Original reports preserved intact.</span>
                 </div>
 
                 {issue.linked_complaints && issue.linked_complaints.length > 0 ? (
-                  <div className="list-group">
+                  <div className="d-flex flex-column gap-2">
                     {issue.linked_complaints.map((c: any) => (
                       <div
                         key={c.complaint_id}
-                        className="list-group-item d-flex justify-content-between align-items-center p-3"
+                        className="p-3 rounded border d-flex justify-content-between align-items-center bg-white"
                       >
                         <div>
                           <div className="d-flex align-items-center gap-2">
-                            <strong>#{c.complaint_id}</strong>
-                            <Link to={`/complaints/${c.complaint_id}`} className="fw-semibold text-decoration-none">
+                            <span className="font-monospace fw-semibold text-secondary">#{c.complaint_id}</span>
+                            <Link to={`/complaints/${c.complaint_id}`} className="fw-semibold text-dark text-decoration-none">
                               {c.title}
                             </Link>
-                            <span className="badge bg-secondary text-capitalize small">
+                            <span className="cv-badge cv-badge-low text-capitalize" style={{ fontSize: '0.7rem' }}>
                               {c.submission_type}
                             </span>
                           </div>
@@ -193,21 +206,20 @@ export const IssueDetailPage: React.FC = () => {
                           </div>
                         </div>
                         <div>
-                          {/* Reversible Grouping */}
                           <button
                             type="button"
-                            className="btn btn-sm btn-outline-danger"
+                            className="btn btn-sm btn-outline-secondary text-danger"
                             title="Unlink complaint (reversible)"
                             onClick={() => handleUnlink(c.complaint_id)}
                           >
-                            <i className="bi bi-x-circle me-1"></i>Unlink
+                            Unlink
                           </button>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="alert alert-warning small mb-0">
+                  <div className="alert alert-light border small text-muted mb-0">
                     No complaints currently linked to this issue.
                   </div>
                 )}
@@ -215,39 +227,41 @@ export const IssueDetailPage: React.FC = () => {
 
               {/* Suggested Related Reports (Semantic AI & Proximity) */}
               <div className="mb-4">
-                <h5 className="mb-2 text-dark">
-                  <i className="bi bi-magic me-1 text-primary"></i>Suggested Related Reports
-                </h5>
-                <p className="text-muted small mb-3">
-                  Candidate complaints ranked using multilingual semantic similarity and structured location proximity.
-                </p>
+                <div className="mb-2">
+                  <h5 className="mb-1 fw-semibold text-dark">
+                    Suggested Related Reports
+                  </h5>
+                  <p className="text-muted small mb-0">
+                    Candidate complaints ranked via multilingual semantic embeddings and facility proximity.
+                  </p>
+                </div>
 
                 {issue.suggested_matches && issue.suggested_matches.length > 0 ? (
-                  <div className="list-group">
+                  <div className="d-flex flex-column gap-2 mt-3">
                     {issue.suggested_matches.map((m: any) => (
-                      <div key={m.complaint_id} className="list-group-item p-3">
-                        <div className="d-flex justify-content-between align-items-start">
+                      <div key={m.complaint_id} className="p-3 rounded border bg-white">
+                        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-start gap-2">
                           <div>
                             <div className="d-flex align-items-center gap-2">
-                              <strong>#{m.complaint_id}</strong>
-                              <Link to={`/complaints/${m.complaint_id}`} target="_blank" className="fw-semibold text-decoration-none">
+                              <span className="font-monospace fw-semibold text-secondary">#{m.complaint_id}</span>
+                              <Link to={`/complaints/${m.complaint_id}`} target="_blank" className="fw-semibold text-dark text-decoration-none">
                                 {m.title}
                               </Link>
                               {m.is_possible_recurrence && (
-                                <span className="badge bg-danger-subtle text-danger border border-danger">
-                                  <i className="bi bi-arrow-repeat"></i> Possible Recurrence
+                                <span className="cv-badge cv-badge-urgent">
+                                  Possible Recurrence
                                 </span>
                               )}
                             </div>
                             <div className="small text-muted mt-1">
-                              <i className="bi bi-geo-alt"></i> {m.building} {m.room && `(${m.room})`} &bull;{' '}
-                              <span className="text-primary fw-semibold">{m.match_details}</span>
+                              <span><i className="bi bi-geo-alt"></i> {m.building} {m.room && `(${m.room})`}</span> &bull;{' '}
+                              <span className="text-primary fw-medium">{m.match_details}</span>
                             </div>
                           </div>
                           <div className="d-flex gap-2">
                             <button
                               type="button"
-                              className="btn btn-sm btn-outline-primary"
+                              className="btn btn-sm btn-outline-secondary"
                               onClick={() => handleFastLink(m.complaint_id, 'same_incident')}
                             >
                               Same Incident
@@ -265,38 +279,32 @@ export const IssueDetailPage: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="alert alert-light border small text-muted mb-0">
+                  <div className="alert alert-light border small text-muted mb-0 mt-3">
                     No unlinked candidate complaints found with high similarity.
                   </div>
                 )}
               </div>
 
               {/* Status Progression History */}
-              <div className="card bg-white border">
-                <div className="card-header bg-light py-2">
-                  <h6 className="mb-0 text-dark fw-bold">
-                    <i className="bi bi-clock-history me-1"></i>Issue Status History
-                  </h6>
+              <div className="cv-card border">
+                <div className="cv-card-header">
+                  <h6 className="mb-0 fw-semibold text-dark">Issue Status History</h6>
                 </div>
-                <div className="card-body p-3">
+                <div className="cv-card-body p-3">
                   {issue.status_events && issue.status_events.length > 0 ? (
-                    <ul className="list-group list-group-flush">
+                    <div className="d-flex flex-column gap-2">
                       {issue.status_events.map((ev: any) => (
-                        <li key={ev.id} className="list-group-item px-0 py-2">
-                          <div className="d-flex justify-content-between align-items-center">
-                            <div>
-                              <span className="badge bg-secondary text-capitalize me-2">
-                                {ev.new_status}
-                              </span>
-                              <span className="text-dark">{ev.note}</span>
-                            </div>
-                            <small className="text-muted">
-                              {new Date(ev.created_at).toLocaleString()}
-                            </small>
+                        <div key={ev.id} className="d-flex justify-content-between align-items-center py-2 border-bottom last-border-none">
+                          <div className="d-flex align-items-center gap-2">
+                            <span className="cv-badge cv-badge-low text-capitalize">{ev.new_status}</span>
+                            <span className="text-dark small">{ev.note}</span>
                           </div>
-                        </li>
+                          <span className="text-muted small">
+                            {new Date(ev.created_at).toLocaleString()}
+                          </span>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
                     <p className="text-muted small mb-0">No status updates logged.</p>
                   )}
@@ -306,22 +314,20 @@ export const IssueDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Status Operations & Resolution Rounds */}
+        {/* Right Column: Status Operations, Resolution Rounds, Manual Link */}
         <div className="col-lg-4">
           {/* Status Update Form */}
-          <div className="card card-shadow mb-4">
-            <div className="card-header bg-white py-3">
-              <h5 className="mb-0 text-dark">
-                <i className="bi bi-sliders me-2"></i>Update Status
-              </h5>
+          <div className="cv-card mb-4">
+            <div className="cv-card-header">
+              <h5 className="mb-0 fw-bold text-dark">Update Operational Status</h5>
             </div>
-            <div className="card-body p-3">
-              {statusMessage && <div className="alert alert-success py-2 small">{statusMessage}</div>}
-              {statusError && <div className="alert alert-danger py-2 small">{statusError}</div>}
+            <div className="cv-card-body p-3">
+              {statusMessage && <div className="alert alert-success py-2 small mb-3">{statusMessage}</div>}
+              {statusError && <div className="alert alert-danger py-2 small mb-3">{statusError}</div>}
 
               <form onSubmit={handleStatusUpdate}>
                 <div className="mb-3">
-                  <label className="form-label small fw-semibold">New Operational Status</label>
+                  <label className="form-label">New Status</label>
                   <select
                     className="form-select"
                     value={newStatus}
@@ -335,20 +341,20 @@ export const IssueDetailPage: React.FC = () => {
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label small fw-semibold">
-                    Operational Note / Reason <span className="text-danger">*</span>
+                  <label className="form-label">
+                    Operational Note <span className="text-danger">*</span>
                   </label>
                   <textarea
                     className="form-control"
                     rows={3}
-                    placeholder="Required note. If marking Resolved, describe the specific repairs completed..."
+                    placeholder="Describe maintenance actions taken or resolution notes..."
                     value={statusNote}
                     onChange={(e) => setStatusNote(e.target.value)}
                     required
                     minLength={5}
                   />
-                  <div className="form-text small text-muted">
-                    When marking Resolved, a new feedback round will be created for submitters.
+                  <div className="form-text">
+                    Marking Resolved opens a new feedback round for linked submitters.
                   </div>
                 </div>
 
@@ -357,26 +363,23 @@ export const IssueDetailPage: React.FC = () => {
                   className="btn btn-primary w-100"
                   disabled={statusUpdating}
                 >
-                  <i className="bi bi-arrow-repeat me-1"></i>
-                  {statusUpdating ? 'Updating...' : 'Commit Status Update'}
+                  {statusUpdating ? 'Updating Status...' : 'Commit Status Update'}
                 </button>
               </form>
             </div>
           </div>
 
-          {/* Resolution Rounds & Verified Feedback */}
-          <div className="card card-shadow mb-4">
-            <div className="card-header bg-white py-3">
-              <h5 className="mb-0 text-dark">
-                <i className="bi bi-patch-check me-2"></i>Resolution Feedback Rounds
-              </h5>
+          {/* Resolution Feedback Rounds */}
+          <div className="cv-card mb-4">
+            <div className="cv-card-header">
+              <h5 className="mb-0 fw-bold text-dark">Resolution Feedback Rounds</h5>
             </div>
-            <div className="card-body p-3">
+            <div className="cv-card-body p-3">
               {issue.resolution_rounds && issue.resolution_rounds.length > 0 ? (
                 issue.resolution_rounds.map((round: any) => (
-                  <div key={round.round_number} className="border rounded p-3 mb-3">
+                  <div key={round.round_number} className="p-3 rounded border mb-3 bg-white">
                     <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span className="fw-bold">Round #{round.round_number}</span>
+                      <span className="fw-bold text-dark">Round #{round.round_number}</span>
                       <StatusBadge type="feedback_round" value={round.status} />
                     </div>
 
@@ -384,8 +387,8 @@ export const IssueDetailPage: React.FC = () => {
                       <strong>Resolution Note:</strong> <em>"{round.resolution_note}"</em>
                     </p>
 
-                    <div className="bg-light p-2 rounded small">
-                      <div className="fw-semibold text-secondary mb-1">Aggregate Submitter Responses:</div>
+                    <div className="p-2 rounded small" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                      <div className="fw-semibold text-secondary mb-1">Submitter Confirmations:</div>
                       <div className="d-flex justify-content-between">
                         <span className="text-success">
                           Fixed: <strong>{round.aggregate_counts.fixed}</strong>
@@ -399,33 +402,31 @@ export const IssueDetailPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="small text-muted mt-2" style={{ fontSize: '0.78rem' }}>
-                      <em>All linked submitters must confirm fixed before labeled submitter-confirmed. Missing responses never count as fixed.</em>
+                    <div className="small text-muted mt-2" style={{ fontSize: '0.75rem' }}>
+                      <em>All submitters must confirm fixed before labeled Submitter-Confirmed.</em>
                     </div>
                   </div>
                 ))
               ) : (
                 <p className="text-muted small mb-0">
-                  No resolution rounds yet. When this issue is marked Resolved, original submitters will be invited to provide verified feedback.
+                  No resolution rounds yet. When this issue is marked Resolved, original submitters will be invited to confirm.
                 </p>
               )}
             </div>
           </div>
 
           {/* Manual Link by ID */}
-          <div className="card card-shadow mb-4">
-            <div className="card-header bg-light py-2">
-              <h6 className="mb-0 text-dark fw-bold">
-                <i className="bi bi-plus-lg me-1"></i>Link Complaint by ID
-              </h6>
+          <div className="cv-card mb-4">
+            <div className="cv-card-header">
+              <h6 className="mb-0 fw-bold text-dark">Link Complaint by ID</h6>
             </div>
-            <div className="card-body p-3">
+            <div className="cv-card-body p-3">
               <form onSubmit={handleManualLink}>
                 <div className="mb-2">
-                  <label className="form-label small fw-semibold">Complaint Reference ID</label>
+                  <label className="form-label">Complaint Reference ID</label>
                   <input
                     type="number"
-                    className="form-control form-control-sm"
+                    className="form-control"
                     placeholder="e.g. 5"
                     value={manualComplaintId}
                     onChange={(e) => setManualComplaintId(e.target.value)}
@@ -433,9 +434,9 @@ export const IssueDetailPage: React.FC = () => {
                   />
                 </div>
                 <div className="mb-3">
-                  <label className="form-label small fw-semibold">Relationship Type</label>
+                  <label className="form-label">Relationship Type</label>
                   <select
-                    className="form-select form-select-sm"
+                    className="form-select"
                     value={manualRelType}
                     onChange={(e) => setManualRelType(e.target.value)}
                   >
@@ -443,7 +444,7 @@ export const IssueDetailPage: React.FC = () => {
                     <option value="related_only">Related Only</option>
                   </select>
                 </div>
-                <button type="submit" className="btn btn-outline-primary btn-sm w-100">
+                <button type="submit" className="btn btn-outline-secondary w-100">
                   Link Submission
                 </button>
               </form>
@@ -454,4 +455,3 @@ export const IssueDetailPage: React.FC = () => {
     </div>
   );
 };
-

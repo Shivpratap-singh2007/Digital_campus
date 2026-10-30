@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
@@ -8,6 +8,7 @@ export const MyComplaintsPage: React.FC = () => {
   const { user } = useAuth();
   const [complaints, setComplaints] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [filterType, setFilterType] = useState<string>('');
 
   useEffect(() => {
     async function loadComplaints() {
@@ -23,87 +24,153 @@ export const MyComplaintsPage: React.FC = () => {
     loadComplaints();
   }, []);
 
+  const filtered = useMemo(() => {
+    if (!filterType) return complaints;
+    return complaints.filter((c) => c.submission_type === filterType);
+  }, [complaints, filterType]);
+
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      {/* Page Header */}
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-          <h3 className="mb-1 text-dark">
-            <i className="bi bi-collection me-2"></i>My Submissions
-          </h3>
+          <div className="d-flex align-items-center gap-2 mb-1">
+            <h3 className="mb-0 fw-bold">My Submissions</h3>
+            <span className="cv-badge cv-badge-low">{complaints.length} Total</span>
+          </div>
           <p className="text-muted small mb-0">
-            Track status progression and provide verified resolution feedback once issues are marked resolved.
+            Track operational status progression and submit verified feedback once repairs are marked resolved.
           </p>
         </div>
-        <Link to="/new-complaint" className="btn btn-primary">
-          <i className="bi bi-plus-circle me-1"></i>New Report
+        <Link to="/new-complaint" className="btn btn-primary d-inline-flex align-items-center gap-2">
+          <i className="bi bi-plus-lg"></i>
+          <span>New Submission</span>
         </Link>
       </div>
 
+      {/* Unverified Email Alert */}
       {!user?.is_verified && (
-        <div className="alert alert-warning d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <i className="bi bi-exclamation-triangle-fill me-2"></i>
-            <strong>Email Unverified:</strong> You must verify your college email address before new submissions can be submitted.
+        <div className="cv-card mb-4 border-warning bg-white">
+          <div className="cv-card-body p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div className="d-flex align-items-center gap-2">
+              <i className="bi bi-exclamation-triangle text-warning fs-5"></i>
+              <div>
+                <span className="fw-semibold text-dark">Email Verification Required:</span>{' '}
+                <span className="text-secondary small">
+                  Verify your campus domain email address before submitting new complaints or suggestions.
+                </span>
+              </div>
+            </div>
+            <Link to="/verify-email" className="btn btn-outline-secondary btn-sm">
+              Verify Email Address
+            </Link>
           </div>
-          <Link to="/verify-email" className="btn btn-sm btn-outline-dark">
-            Verify Now
-          </Link>
         </div>
       )}
 
+      {/* Filter Tabs if complaints exist */}
+      {complaints.length > 0 && (
+        <div className="d-flex gap-2 mb-3">
+          <button
+            type="button"
+            className={`btn btn-sm ${filterType === '' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setFilterType('')}
+          >
+            All ({complaints.length})
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${filterType === 'complaint' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setFilterType('complaint')}
+          >
+            Complaints ({complaints.filter((c) => c.submission_type === 'complaint').length})
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${filterType === 'suggestion' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setFilterType('suggestion')}
+          >
+            Suggestions ({complaints.filter((c) => c.submission_type === 'suggestion').length})
+          </button>
+        </div>
+      )}
+
+      {/* Complaints Table */}
       {loading ? (
-        <div className="card card-shadow p-5 text-center text-muted">
+        <div className="cv-card p-5 text-center text-muted">
+          <div className="spinner-border spinner-border-sm text-secondary me-2" role="status"></div>
           Loading your submissions...
         </div>
-      ) : complaints.length > 0 ? (
-        <div className="card card-shadow">
+      ) : filtered.length > 0 ? (
+        <div className="cv-card overflow-hidden">
           <div className="table-responsive">
-            <table className="table table-hover align-middle mb-0">
-              <thead className="table-light">
+            <table className="cv-table">
+              <thead>
                 <tr>
                   <th style={{ width: '80px' }}>Ref ID</th>
                   <th>Type & Title</th>
                   <th>Category</th>
-                  <th>Building / Room</th>
+                  <th>Campus Location</th>
                   <th>Priority</th>
                   <th>Status</th>
-                  <th>Feedback State</th>
-                  <th className="text-end">Actions</th>
+                  <th>Resolution Feedback</th>
+                  <th className="text-end" style={{ width: '100px' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {complaints.map((c) => (
+                {filtered.map((c) => (
                   <tr key={c.id}>
-                    <td><strong>#{c.id}</strong></td>
                     <td>
-                      <div>
-                        <span className="badge bg-secondary text-capitalize me-1">{c.submission_type}</span>
-                        <Link to={`/complaints/${c.id}`} className="fw-semibold text-decoration-none">
+                      <span className="font-monospace fw-semibold text-secondary">#{c.id}</span>
+                    </td>
+                    <td style={{ maxWidth: '320px' }}>
+                      <div className="d-flex align-items-center gap-1 mb-1">
+                        <span className="cv-badge cv-badge-low text-capitalize" style={{ fontSize: '0.7rem' }}>
+                          {c.submission_type}
+                        </span>
+                        <Link
+                          to={`/complaints/${c.id}`}
+                          className="fw-semibold text-dark text-decoration-none text-truncate"
+                          style={{ maxWidth: '240px' }}
+                        >
                           {c.title}
                         </Link>
                       </div>
-                      <small className="text-muted">
-                        {new Date(c.created_at).toLocaleString()}
-                      </small>
+                      <div className="text-muted small">
+                        {new Date(c.created_at).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </div>
                     </td>
-                    <td><span className="badge bg-light text-dark border">{c.display_category}</span></td>
                     <td>
-                      <div>{c.building}</div>
-                      {c.room && <small className="text-muted">{c.room}</small>}
+                      <span className="cv-badge cv-badge-low">{c.display_category}</span>
                     </td>
-                    <td><StatusBadge type="priority" value={c.priority} /></td>
-                    <td><StatusBadge type="status" value={c.status} /></td>
+                    <td>
+                      <div className="fw-medium text-dark">{c.building}</div>
+                      {c.room && <div className="text-muted small">{c.room}</div>}
+                    </td>
+                    <td>
+                      <StatusBadge type="priority" value={c.priority} />
+                    </td>
+                    <td>
+                      <StatusBadge type="status" value={c.status} />
+                    </td>
                     <td>
                       {c.linked_issue_status === 'resolved' ? (
-                        <Link to={`/complaints/${c.id}#feedback`} className="btn btn-sm btn-outline-success">
-                          <i className="bi bi-hand-thumbs-up me-1"></i>Give Feedback
+                        <Link
+                          to={`/complaints/${c.id}#feedback`}
+                          className="btn btn-sm btn-outline-secondary text-success border-success"
+                        >
+                          <i className="bi bi-patch-check me-1"></i>Give Feedback
                         </Link>
                       ) : (
                         <span className="text-muted small">—</span>
                       )}
                     </td>
                     <td className="text-end">
-                      <Link to={`/complaints/${c.id}`} className="btn btn-sm btn-outline-primary">
+                      <Link to={`/complaints/${c.id}`} className="btn btn-sm btn-outline-secondary">
                         View
                       </Link>
                     </td>
@@ -114,18 +181,21 @@ export const MyComplaintsPage: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="card card-shadow text-center p-5">
-          <i className="bi bi-inbox text-muted" style={{ fontSize: '3rem' }}></i>
-          <h5 className="mt-3">No Submissions Found</h5>
-          <p className="text-muted small">You haven't submitted any campus complaints or suggestions yet.</p>
-          <div>
-            <Link to="/new-complaint" className="btn btn-primary">
-              Submit Your First Report
-            </Link>
+        <div className="cv-card text-center p-5">
+          <div className="text-muted mb-2">
+            <i className="bi bi-inbox" style={{ fontSize: '2.5rem' }}></i>
           </div>
+          <h5 className="fw-semibold text-dark mb-1">No Submissions Found</h5>
+          <p className="text-muted small mb-3">
+            {complaints.length === 0
+              ? "You haven't submitted any campus complaints or suggestions yet."
+              : 'No submissions match the selected filter category.'}
+          </p>
+          <Link to="/new-complaint" className="btn btn-primary btn-sm">
+            Submit Your First Report
+          </Link>
         </div>
       )}
     </div>
   );
 };
-

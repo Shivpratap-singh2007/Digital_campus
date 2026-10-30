@@ -47,7 +47,6 @@ export const NewComplaintPage: React.FC = () => {
   const [error, setError] = useState('');
   const [analyzingStatus, setAnalyzingStatus] = useState<string | null>(null);
 
-  // Initialize a unique submission key to prevent double clicks
   useEffect(() => {
     setSubmissionKey(crypto.randomUUID());
   }, []);
@@ -87,7 +86,6 @@ export const NewComplaintPage: React.FC = () => {
         await api.post(`/api/complaints/${complaintId}/analyze`);
       } catch (analysisErr) {
         console.warn('Background analysis warning:', analysisErr);
-        // Analysis failure must not delete or hide the saved complaint
       }
 
       navigate(`/complaints/${complaintId}`);
@@ -102,29 +100,42 @@ export const NewComplaintPage: React.FC = () => {
   return (
     <div className="row justify-content-center">
       <div className="col-lg-8">
-        <div className="card card-shadow">
-          <div className="card-header bg-white py-3 border-bottom">
-            <h4 className="mb-0 text-primary">
-              <i className="bi bi-pencil-square me-2"></i>Submit Campus Complaint or Suggestion
-            </h4>
-            <p className="text-muted small mb-0 mt-1">
-              Your report will be processed through deterministic safety rules and semantic clustering.
+        {/* Navigation Breadcrumb */}
+        <div className="mb-3">
+          <Link to="/my-complaints" className="text-decoration-none text-muted small d-inline-flex align-items-center gap-1">
+            <i className="bi bi-arrow-left"></i> Back to Submissions
+          </Link>
+        </div>
+
+        <div className="cv-card">
+          <div className="cv-card-header">
+            <h4 className="mb-1 fw-bold text-dark">Submit Campus Report</h4>
+            <p className="text-muted small mb-0">
+              Your submission will be saved securely, assigned a tracking ID, and evaluated with explainable priority rules.
             </p>
           </div>
-          <div className="card-body p-4">
-            {error && <div className="alert alert-danger py-2 small">{error}</div>}
+
+          <div className="cv-card-body p-4">
+            {error && (
+              <div className="alert alert-danger py-2 small mb-4" role="alert">
+                <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                {error}
+              </div>
+            )}
+
             {analyzingStatus && (
-              <div className="alert alert-info py-2 small d-flex align-items-center gap-2">
+              <div className="alert alert-info py-2 small d-flex align-items-center gap-2 mb-4">
                 <div className="spinner-border spinner-border-sm" role="status"></div>
                 <span>{analyzingStatus}</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit}>
-              <div className="row mb-3">
+              {/* Type and Category Row */}
+              <div className="row g-3 mb-3">
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold">
-                    Submission Type <span className="text-danger">*</span>
+                  <label className="form-label">
+                    Report Type <span className="text-danger">*</span>
                   </label>
                   <select
                     className="form-select"
@@ -132,14 +143,14 @@ export const NewComplaintPage: React.FC = () => {
                     onChange={(e) => setSubmissionType(e.target.value)}
                     required
                   >
-                    <option value="complaint">Complaint (Issue or Malfunction)</option>
+                    <option value="complaint">Complaint (Fault or Issue)</option>
                     <option value="suggestion">Suggestion (Campus Improvement)</option>
                   </select>
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold">
-                    Category <span className="text-danger">*</span>
+                  <label className="form-label">
+                    Initial Category Estimate <span className="text-danger">*</span>
                   </label>
                   <select
                     className="form-select"
@@ -153,20 +164,19 @@ export const NewComplaintPage: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                  <div className="form-text small text-muted">
-                    Select your best estimate or choose "Not sure" for AI suggestions.
-                  </div>
+                  <div className="form-text">Choose your best estimate or select "Not sure" for automatic suggestion.</div>
                 </div>
               </div>
 
+              {/* Title */}
               <div className="mb-3">
-                <label className="form-label fw-semibold">
-                  Title <span className="text-danger">*</span>
+                <label className="form-label">
+                  Subject / Summary <span className="text-danger">*</span>
                 </label>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Brief summary of the issue (e.g., Broken water pipe in hostel corridor)"
+                  placeholder="e.g. Broken water tap in 2nd floor restroom"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   minLength={5}
@@ -175,10 +185,11 @@ export const NewComplaintPage: React.FC = () => {
                 />
               </div>
 
-              <div className="row mb-3">
+              {/* Location Row */}
+              <div className="row g-3 mb-3">
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold">
-                    Campus Location / Building <span className="text-danger">*</span>
+                  <label className="form-label">
+                    Campus Facility / Building <span className="text-danger">*</span>
                   </label>
                   <select
                     className="form-select"
@@ -195,11 +206,11 @@ export const NewComplaintPage: React.FC = () => {
                 </div>
 
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold">Room / Area (Optional)</label>
+                  <label className="form-label">Room or Specific Area</label>
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="e.g., Lab 204, 2nd Floor Corridor, North Wing"
+                    placeholder="e.g. Lab 204, East Stairwell, 1st Floor"
                     value={room}
                     onChange={(e) => setRoom(e.target.value)}
                     maxLength={100}
@@ -207,44 +218,52 @@ export const NewComplaintPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Description */}
               <div className="mb-3">
-                <label className="form-label fw-semibold">
-                  Description <span className="text-danger">*</span>
+                <label className="form-label">
+                  Detailed Description <span className="text-danger">*</span>
                 </label>
                 <textarea
                   className="form-control"
                   rows={5}
-                  placeholder="Provide clear, factual details regarding what is malfunctioning, hazard risks, or maintenance required..."
+                  placeholder="Describe the issue factually: what is malfunctioning, observable hazards, or maintenance needed..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   minLength={10}
                   maxLength={4000}
                   required
                 />
-                <div className="form-text text-muted small">
-                  Min 10 characters, max 4000 characters.
-                </div>
+                <div className="form-text">Minimum 10 characters. Plain factual descriptions ensure faster triage.</div>
               </div>
 
+              {/* Photo Attachment */}
               <div className="mb-4">
-                <label className="form-label fw-semibold">Attach Photo (Optional)</label>
+                <label className="form-label">Supporting Photo (Optional)</label>
                 <input
                   type="file"
                   className="form-control"
                   accept="image/jpeg,image/png"
                   onChange={(e) => setImageFile(e.target.files?.[0] || null)}
                 />
-                <div className="form-text text-muted small">
-                  Max 5 MB. Formats: JPEG or PNG. EXIF metadata (including GPS coordinates) will be automatically stripped before secure storage outside static web folders.
+                <div className="form-text">
+                  Max size: 5 MB (JPEG/PNG). EXIF metadata and GPS coordinates are automatically removed prior to storage.
                 </div>
               </div>
 
-              <div className="d-flex justify-content-between align-items-center pt-2 border-top">
+              {/* Form Action Buttons */}
+              <div className="d-flex justify-content-between align-items-center pt-3 border-top">
                 <Link to="/my-complaints" className="btn btn-outline-secondary">
                   Cancel
                 </Link>
                 <button type="submit" className="btn btn-primary px-4" disabled={loading}>
-                  {loading ? 'Submitting & Saving...' : 'Submit Report'}
+                  {loading ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                      Saving & Submitting...
+                    </>
+                  ) : (
+                    'Submit Report'
+                  )}
                 </button>
               </div>
             </form>
@@ -254,4 +273,3 @@ export const NewComplaintPage: React.FC = () => {
     </div>
   );
 };
-

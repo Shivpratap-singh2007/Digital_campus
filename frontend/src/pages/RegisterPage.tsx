@@ -34,34 +34,38 @@ export const RegisterPage: React.FC = () => {
   };
 
   return (
-    <div className="row justify-content-center">
-      <div className="col-md-6">
-        <div className="card card-shadow mt-4">
-          <div className="card-body p-4">
+    <div className="row justify-content-center py-4">
+      <div className="col-11 col-sm-9 col-md-7 col-lg-6 col-xl-5">
+        <div className="cv-card">
+          <div className="cv-card-body p-4">
             <div className="text-center mb-4">
-              <i className="bi bi-mortarboard text-success" style={{ fontSize: '2.5rem' }}></i>
-              <h3 className="card-title mt-2">Campus Registration</h3>
-              <p className="text-muted small">Restricted to authorized college email domains</p>
+              <h4 className="fw-bold text-dark mb-1">Create Account</h4>
+              <p className="text-muted small mb-0">Restricted to authorized college email domains</p>
             </div>
 
-            <div className="alert alert-info py-2 small mb-3">
-              <i className="bi bi-shield-check me-1"></i>
-              <strong>Domain Verification:</strong> Accounts can only be created with approved campus domains (e.g., <code>@campus.edu</code>, <code>@university.ac.in</code>). A single-use verification link will be dispatched via SMTP.
+            <div className="cv-card bg-white p-3 mb-3 border-subtle">
+              <div className="d-flex align-items-start gap-2">
+                <i className="bi bi-shield-check text-primary mt-1"></i>
+                <div className="small text-secondary">
+                  <strong>Domain Verification Policy:</strong> Registration requires an authorized campus email address (e.g. <code>@campus.edu</code>). A single-use verification token is delivered via SMTP.
+                </div>
+              </div>
             </div>
 
             {error && (
-              <div className="alert alert-danger py-2 small" role="alert">
+              <div className="alert alert-danger py-2 small mb-3" role="alert">
+                <i className="bi bi-exclamation-circle me-1"></i>
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label className="form-label fw-semibold">Full Legal Name</label>
+                <label className="form-label">Full Name</label>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="e.g., Jane Doe"
+                  placeholder="e.g. Aarav Sharma"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
@@ -69,61 +73,67 @@ export const RegisterPage: React.FC = () => {
               </div>
 
               <div className="mb-3">
-                <label className="form-label fw-semibold">College Email Address</label>
+                <label className="form-label">College Email Address</label>
                 <input
                   type="email"
                   className="form-control"
-                  placeholder="yourname@campus.edu"
+                  placeholder="name@campus.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
-                <div className="form-text small text-muted">
-                  Must be your verified college email domain.
+                <div className="form-text">Must match allowed institution domains.</div>
+              </div>
+
+              <div className="row g-2 mb-3">
+                <div className="col-md-6">
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Min 8 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    minLength={8}
+                    required
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Confirm Password</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="Repeat password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    minLength={8}
+                    required
+                  />
                 </div>
               </div>
 
-              <div className="mb-3">
-                <label className="form-label fw-semibold">Password</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  placeholder="Minimum 8 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={8}
-                  required
-                />
+              <div className="small text-muted mb-4" style={{ fontSize: '0.78rem' }}>
+                <em>Note: Operations handler and administrator roles must be provisioned via trusted CLI commands and cannot be chosen during self-registration.</em>
               </div>
 
-              <div className="mb-3">
-                <label className="form-label fw-semibold">Confirm Password</label>
-                <input
-                  type="password"
-                  className="form-control"
-                  placeholder="Repeat password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  minLength={8}
-                  required
-                />
-              </div>
-
-              <div className="form-text small text-muted mb-4">
-                <em>Note: Administrative and operations handler roles cannot be requested during registration and must be provisioned via trusted CLI system command.</em>
-              </div>
-
-              <div className="d-grid">
-                <button type="submit" className="btn btn-success btn-lg" disabled={loading}>
-                  {loading ? 'Registering...' : 'Create Account'}
-                </button>
-              </div>
+              <button type="submit" className="btn btn-primary w-100 py-2" disabled={loading}>
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Registering...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </button>
             </form>
 
-            <hr className="my-4" />
-            <div className="text-center">
+            <div className="text-center mt-4 pt-3 border-top">
               <p className="mb-0 text-muted small">
-                Already have an account? <Link to="/login">Log in</Link>
+                Already have an account?{' '}
+                <Link to="/login" className="text-primary fw-medium text-decoration-none">
+                  Sign in
+                </Link>
               </p>
             </div>
           </div>
@@ -132,4 +142,3 @@ export const RegisterPage: React.FC = () => {
     </div>
   );
 };
-

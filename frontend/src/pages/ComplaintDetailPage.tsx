@@ -61,15 +61,23 @@ export const ComplaintDetailPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="p-5 text-center text-muted">Loading complaint details...</div>;
+    return (
+      <div className="cv-card p-5 text-center text-muted">
+        <div className="spinner-border spinner-border-sm text-secondary me-2" role="status"></div>
+        Loading submission details...
+      </div>
+    );
   }
 
   if (error || !complaint) {
     return (
-      <div className="alert alert-danger my-4">
-        {error || 'Complaint not found.'}
-        <div className="mt-2">
-          <Link to="/my-complaints" className="btn btn-sm btn-outline-danger">
+      <div className="cv-card p-4 text-center my-4">
+        <div className="text-danger mb-2">
+          <i className="bi bi-exclamation-triangle" style={{ fontSize: '2rem' }}></i>
+        </div>
+        <h5 className="fw-semibold text-dark">{error || 'Submission Not Found'}</h5>
+        <div className="mt-3">
+          <Link to="/my-complaints" className="btn btn-outline-secondary btn-sm">
             Back to Submissions
           </Link>
         </div>
@@ -82,64 +90,72 @@ export const ComplaintDetailPage: React.FC = () => {
 
   return (
     <div>
+      {/* Top Back Navigation */}
       <div className="mb-3">
-        <Link to="/my-complaints" className="text-decoration-none text-muted small">
+        <Link to="/my-complaints" className="text-decoration-none text-muted small d-inline-flex align-items-center gap-1">
           <i className="bi bi-arrow-left"></i> Back to Submissions
         </Link>
       </div>
 
-      <div className="row">
-        {/* Left Column: Details, Image, Feedback */}
+      <div className="row g-4">
+        {/* Left Column: Details, Attachments, Resolution Feedback */}
         <div className="col-lg-8">
-          <div className="card card-shadow mb-4">
-            <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-              <div>
-                <span className="badge bg-secondary text-capitalize me-2">
+          <div className="cv-card mb-4">
+            <div className="cv-card-header d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-2">
+                <span className="cv-badge cv-badge-low text-capitalize">
                   {complaint.submission_type}
                 </span>
-                <span className="text-muted small">Report #{complaint.id}</span>
+                <span className="text-muted small font-monospace">#{complaint.id}</span>
               </div>
               <div>
                 <StatusBadge type="status" value={complaint.status} />
               </div>
             </div>
-            <div className="card-body p-4">
-              <h3 className="card-title text-dark mb-3">{complaint.title}</h3>
 
-              <div className="d-flex flex-wrap gap-2 mb-3">
-                <span className="badge bg-light text-dark border">
+            <div className="cv-card-body p-4">
+              <h3 className="fw-bold text-dark mb-3">{complaint.title}</h3>
+
+              {/* Scope & Priority Chips */}
+              <div className="d-flex flex-wrap align-items-center gap-2 mb-4">
+                <span className="cv-badge cv-badge-low">
                   <i className="bi bi-geo-alt me-1"></i>
-                  {complaint.building} {complaint.room && `• ${complaint.room}`}
+                  {complaint.building} {complaint.room && `· ${complaint.room}`}
                 </span>
-                <span className="badge bg-light text-dark border">
-                  <i className="bi bi-tag me-1"></i>Category: {complaint.display_category}
+                <span className="cv-badge cv-badge-low">
+                  <i className="bi bi-tag me-1"></i>
+                  {complaint.display_category}
                 </span>
                 <StatusBadge type="priority" value={complaint.display_priority} />
+                <span className="text-muted small ms-auto">
+                  Submitted {new Date(complaint.created_at).toLocaleString()}
+                </span>
               </div>
 
-              <div className="card bg-light border-0 p-3 mb-4">
-                <h6 className="text-secondary small fw-bold text-uppercase mb-2">
+              {/* Description Block */}
+              <div className="p-3 rounded mb-4" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                <div className="text-uppercase fw-bold text-muted mb-2" style={{ fontSize: '0.72rem', letterSpacing: '0.05em' }}>
                   Original Submission Description
-                </h6>
-                <p className="mb-0 text-dark" style={{ whiteSpace: 'pre-wrap' }}>
+                </div>
+                <p className="mb-0 text-dark" style={{ whiteSpace: 'pre-wrap', fontSize: '0.92rem', lineHeight: '1.6' }}>
                   {complaint.description}
                 </p>
               </div>
 
-              {/* Secure Attachments */}
+              {/* Secure Verified Attachments */}
               {complaint.attachments && complaint.attachments.length > 0 && (
                 <div className="mb-4">
-                  <h6 className="fw-semibold text-secondary">
-                    <i className="bi bi-paperclip me-1"></i>Verified Photo Attachment
-                  </h6>
+                  <div className="text-uppercase fw-bold text-muted mb-2" style={{ fontSize: '0.72rem', letterSpacing: '0.05em' }}>
+                    Verified Attachment
+                  </div>
                   {complaint.attachments.map((att: any, idx: number) => (
                     <div key={idx} className="border rounded p-2 d-inline-block bg-white text-center">
                       <a href={att.url} target="_blank" rel="noreferrer">
                         <img
                           src={att.url}
-                          alt="Complaint photo"
+                          alt="Submission photo"
                           className="img-fluid rounded"
-                          style={{ maxHeight: '280px', objectFit: 'contain' }}
+                          style={{ maxHeight: '260px', objectFit: 'contain' }}
                         />
                       </a>
                       <div className="small text-muted mt-1">
@@ -152,111 +168,101 @@ export const ComplaintDetailPage: React.FC = () => {
 
               {/* Verified Resolution Feedback Section */}
               {isResolved && (
-                <div id="feedback" className="card border-success mt-4">
-                  <div className="card-header bg-success text-white py-2">
-                    <h5 className="mb-0">
-                      <i className="bi bi-patch-check-fill me-2"></i>Verified Resolution Feedback
-                    </h5>
+                <div id="feedback" className="cv-card border-success mt-4">
+                  <div className="cv-card-header bg-white border-bottom border-success-subtle py-3">
+                    <div className="d-flex align-items-center gap-2">
+                      <i className="bi bi-patch-check text-success fs-5"></i>
+                      <div>
+                        <h5 className="mb-0 fw-bold text-dark">Verified Resolution Feedback</h5>
+                        <p className="text-muted small mb-0">
+                          Campus operations marked this issue as resolved. As the original submitter, please verify the physical fix.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="card-body">
-                    <p className="text-muted small">
-                      Campus facilities marked this issue as resolved. As the original verified submitter, please confirm whether the physical repair or solution was successful.
-                    </p>
 
-                    {feedbackMessage && <div className="alert alert-success py-2 small">{feedbackMessage}</div>}
-                    {feedbackError && <div className="alert alert-danger py-2 small">{feedbackError}</div>}
+                  <div className="cv-card-body p-4">
+                    {feedbackMessage && <div className="alert alert-success py-2 small mb-3">{feedbackMessage}</div>}
+                    {feedbackError && <div className="alert alert-danger py-2 small mb-3">{feedbackError}</div>}
 
                     {linkedIssue?.user_feedback && (
-                      <div className="alert alert-info py-2 mb-3">
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div>
-                            <strong>Your Recorded Feedback:</strong>
-                            <span className="ms-2">
-                              <StatusBadge
-                                type="feedback_response"
-                                value={linkedIssue.user_feedback.response}
-                              />
-                            </span>
-                          </div>
-                          <small className="text-muted">
-                            {new Date(linkedIssue.user_feedback.created_at).toLocaleString()}
-                          </small>
+                      <div className="p-3 rounded mb-3" style={{ backgroundColor: 'var(--bg-subtle)' }}>
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <span className="fw-semibold text-dark small">Your Recorded Rating:</span>
+                          <StatusBadge type="feedback_response" value={linkedIssue.user_feedback.response} />
                         </div>
                         {linkedIssue.user_feedback.comments && (
-                          <p className="small text-muted mt-2 mb-0">
-                            <em>"{linkedIssue.user_feedback.comments}"</em>
-                          </p>
+                          <div className="small text-muted fst-italic mt-1">
+                            "{linkedIssue.user_feedback.comments}"
+                          </div>
                         )}
+                        <div className="small text-muted mt-1" style={{ fontSize: '0.75rem' }}>
+                          Recorded on {new Date(linkedIssue.user_feedback.created_at).toLocaleString()}
+                        </div>
                       </div>
                     )}
 
                     <form onSubmit={handleFeedbackSubmit}>
                       <div className="mb-3">
-                        <label className="form-label fw-semibold">
-                          Has the issue been resolved to your satisfaction?
-                        </label>
-                        <div className="form-check my-2">
-                          <input
-                            className="form-check-input"
-                            type="radio"
-                            name="response"
-                            id="respFixed"
-                            value="fixed"
-                            checked={feedbackResponse === 'fixed'}
-                            onChange={() => setFeedbackResponse('fixed')}
-                          />
-                          <label className="form-check-label" htmlFor="respFixed">
-                            <strong>Fixed</strong> — The problem has been completely resolved.
+                        <label className="form-label mb-2">Has the issue been resolved to your satisfaction?</label>
+                        <div className="d-flex flex-column gap-2">
+                          <label className="d-flex align-items-center gap-2 p-2 rounded border" style={{ cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="response"
+                              value="fixed"
+                              checked={feedbackResponse === 'fixed'}
+                              onChange={() => setFeedbackResponse('fixed')}
+                            />
+                            <div>
+                              <strong className="text-success">Fixed</strong>
+                              <span className="text-secondary small ms-2">— Problem has been fully resolved.</span>
+                            </div>
                           </label>
-                        </div>
-                        <div className="form-check my-2">
-                          <input
-                            className="form-check-input"
-                            type="radio"
-                            name="response"
-                            id="respPartially"
-                            value="partially_fixed"
-                            checked={feedbackResponse === 'partially_fixed'}
-                            onChange={() => setFeedbackResponse('partially_fixed')}
-                          />
-                          <label className="form-check-label" htmlFor="respPartially">
-                            <strong>Partially fixed</strong> — Some work was done, but problems remain.
+
+                          <label className="d-flex align-items-center gap-2 p-2 rounded border" style={{ cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="response"
+                              value="partially_fixed"
+                              checked={feedbackResponse === 'partially_fixed'}
+                              onChange={() => setFeedbackResponse('partially_fixed')}
+                            />
+                            <div>
+                              <strong className="text-warning text-dark">Partially fixed</strong>
+                              <span className="text-secondary small ms-2">— Work was done, but minor issues remain.</span>
+                            </div>
                           </label>
-                        </div>
-                        <div className="form-check my-2">
-                          <input
-                            className="form-check-input"
-                            type="radio"
-                            name="response"
-                            id="respNotFixed"
-                            value="not_fixed"
-                            checked={feedbackResponse === 'not_fixed'}
-                            onChange={() => setFeedbackResponse('not_fixed')}
-                          />
-                          <label className="form-check-label" htmlFor="respNotFixed">
-                            <strong>Not fixed</strong> — The reported problem still persists.
+
+                          <label className="d-flex align-items-center gap-2 p-2 rounded border" style={{ cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="response"
+                              value="not_fixed"
+                              checked={feedbackResponse === 'not_fixed'}
+                              onChange={() => setFeedbackResponse('not_fixed')}
+                            />
+                            <div>
+                              <strong className="text-danger">Not fixed</strong>
+                              <span className="text-secondary small ms-2">— Physical malfunction still persists.</span>
+                            </div>
                           </label>
                         </div>
                       </div>
 
                       <div className="mb-3">
-                        <label className="form-label fw-semibold">Submitter Comments (Optional)</label>
+                        <label className="form-label">Submitter Observations (Optional)</label>
                         <textarea
                           className="form-control"
                           rows={2}
-                          placeholder="Provide details about the current physical state..."
+                          placeholder="Provide specific notes regarding current state..."
                           value={feedbackComments}
                           onChange={(e) => setFeedbackComments(e.target.value)}
                         />
                       </div>
 
-                      <button
-                        type="submit"
-                        className="btn btn-success"
-                        disabled={feedbackSubmitting}
-                      >
-                        <i className="bi bi-check2-circle me-1"></i>
-                        {feedbackSubmitting ? 'Submitting...' : 'Submit Verified Rating'}
+                      <button type="submit" className="btn btn-primary" disabled={feedbackSubmitting}>
+                        {feedbackSubmitting ? 'Recording Rating...' : 'Submit Verified Confirmation'}
                       </button>
                     </form>
                   </div>
@@ -266,134 +272,127 @@ export const ComplaintDetailPage: React.FC = () => {
           </div>
 
           {/* Status Progression Timeline */}
-          <div className="card card-shadow mb-4">
-            <div className="card-header bg-white py-3">
-              <h5 className="mb-0 text-dark">
-                <i className="bi bi-clock-history me-2"></i>Status Progression & Audit Events
-              </h5>
+          <div className="cv-card mb-4">
+            <div className="cv-card-header">
+              <h5 className="mb-0 fw-semibold text-dark">Status Progression & Timeline</h5>
             </div>
-            <div className="card-body">
+            <div className="cv-card-body p-3">
               {complaint.status_events && complaint.status_events.length > 0 ? (
-                <ul className="list-group list-group-flush">
+                <div className="d-flex flex-column gap-3">
                   {complaint.status_events.map((ev: any) => (
-                    <li key={ev.id} className="list-group-item px-0 py-2">
-                      <div className="d-flex justify-content-between align-items-center">
-                        <div>
-                          <span className="badge bg-secondary text-capitalize me-2">
-                            {ev.new_status}
-                          </span>
-                          <span className="text-dark">{ev.note}</span>
-                        </div>
-                        <small className="text-muted">
-                          {new Date(ev.created_at).toLocaleString()}
-                        </small>
+                    <div key={ev.id} className="d-flex justify-content-between align-items-center py-2 border-bottom last-border-none">
+                      <div className="d-flex align-items-center gap-2">
+                        <span className="cv-badge cv-badge-low text-capitalize">{ev.new_status}</span>
+                        <span className="text-dark small">{ev.note}</span>
                       </div>
-                    </li>
+                      <span className="text-muted small">
+                        {new Date(ev.created_at).toLocaleString()}
+                      </span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               ) : (
-                <p className="text-muted small mb-0">No status progression recorded yet.</p>
+                <p className="text-muted small mb-0">No operational progression events recorded yet.</p>
               )}
             </div>
           </div>
         </div>
 
-        {/* Right Column: AI & Rule Diagnostics */}
+        {/* Right Column: AI Diagnostics & Master Issue Link */}
         <div className="col-lg-4">
-          <div className="card card-shadow mb-4">
-            <div className="card-header bg-light py-2">
-              <h6 className="mb-0 text-dark fw-bold">
-                <i className="bi bi-cpu me-1"></i>Semantic & Rule Diagnostics
-              </h6>
+          {/* AI & Rule Diagnostics Card */}
+          <div className="cv-card mb-4">
+            <div className="cv-card-header">
+              <h6 className="mb-0 fw-bold text-dark">Rule & Semantic Diagnostics</h6>
             </div>
-            <div className="card-body">
+            <div className="cv-card-body p-3">
               {complaint.analysis ? (
-                <>
-                  <div className="mb-3">
-                    <label className="small text-muted text-uppercase fw-bold">Category Evaluation</label>
+                <div className="d-flex flex-column gap-3">
+                  {/* Category Evaluation */}
+                  <div>
+                    <div className="text-uppercase fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>
+                      Category Evaluation
+                    </div>
                     <div className="small">
-                      <div><strong>User Selected:</strong> {complaint.user_category}</div>
-                      <div>
-                        <strong>AI Suggested:</strong>{' '}
+                      <div className="text-muted">User Selected: <strong className="text-dark">{complaint.user_category}</strong></div>
+                      <div className="text-muted mt-1">
+                        AI Suggested:{' '}
                         {complaint.analysis.suggested_category ? (
-                          <span className="text-primary fw-semibold">
+                          <span className="fw-semibold text-primary">
                             {complaint.analysis.suggested_category}
                             {complaint.analysis.category_similarity && (
-                              <span className="badge bg-light text-dark border ms-1">
-                                Score: {complaint.analysis.category_similarity}
+                              <span className="text-muted ms-1 font-monospace">
+                                ({complaint.analysis.category_similarity})
                               </span>
                             )}
                           </span>
                         ) : (
-                          <span className="text-muted">Unavailable</span>
+                          <span className="text-muted">—</span>
                         )}
                       </div>
-                      <div>
-                        <strong>Final Assigned:</strong>{' '}
-                        <span className="badge bg-info text-dark">{complaint.display_category}</span>
+                      <div className="text-muted mt-1">
+                        Assigned Category: <strong className="text-dark">{complaint.display_category}</strong>
                       </div>
                     </div>
-                    <div className="text-muted small mt-1">
-                      <em>{complaint.analysis.category_reason}</em>
-                    </div>
+                    {complaint.analysis.category_reason && (
+                      <div className="text-muted small fst-italic mt-1" style={{ fontSize: '0.78rem' }}>
+                        {complaint.analysis.category_reason}
+                      </div>
+                    )}
                   </div>
 
-                  <hr />
+                  <hr className="my-1 border-subtle" />
 
-                  <div className="mb-3">
-                    <label className="small text-muted text-uppercase fw-bold">
-                      Deterministic Priority Rule
-                    </label>
+                  {/* Priority Rule Evaluation */}
+                  <div>
+                    <div className="text-uppercase fw-bold text-muted mb-1" style={{ fontSize: '0.7rem' }}>
+                      Priority Rule Evaluation
+                    </div>
                     <div className="small">
-                      <div>
-                        <strong>Suggested Priority:</strong>{' '}
+                      <div className="d-flex align-items-center gap-2 mb-1">
+                        <span className="text-muted">Suggested:</span>
                         <StatusBadge type="priority" value={complaint.analysis.suggested_priority} />
                       </div>
                       {complaint.analysis.matched_phrase && (
-                        <div className="mt-1">
-                          <strong>Matched Phrase:</strong>{' '}
-                          <code>{complaint.analysis.matched_phrase}</code>
+                        <div className="text-muted mt-1">
+                          Matched Trigger: <code className="text-dark">{complaint.analysis.matched_phrase}</code>
                         </div>
                       )}
-                      <div className="mt-1 text-muted">
-                        <strong>Rule Rationale:</strong> {complaint.analysis.priority_reason}
+                      <div className="text-muted small mt-1" style={{ fontSize: '0.78rem' }}>
+                        {complaint.analysis.priority_reason}
                       </div>
                     </div>
                   </div>
 
-                  <hr />
+                  <hr className="my-1 border-subtle" />
 
-                  <div className="small text-muted">
-                    <div><strong>Engine:</strong> <code>{complaint.analysis.model_identifier}</code></div>
-                    <div><strong>Version:</strong> v{complaint.analysis.analysis_version}</div>
-                    <div className="mt-1">
-                      <strong>State:</strong>{' '}
-                      {complaint.analysis_state === 'completed' ? (
-                        <span className="badge bg-success">Completed</span>
-                      ) : complaint.analysis_state === 'needs_review' ? (
-                        <span className="badge bg-warning text-dark">Needs Review</span>
-                      ) : (
-                        <span className="badge bg-secondary">{complaint.analysis_state}</span>
-                      )}
+                  {/* Model Engine Metadata */}
+                  <div className="small text-muted" style={{ fontSize: '0.76rem' }}>
+                    <div>Engine: <code>{complaint.analysis.model_identifier}</code></div>
+                    <div>Version: v{complaint.analysis.analysis_version}</div>
+                    <div className="mt-1 d-flex align-items-center gap-1">
+                      <span>Analysis State:</span>
+                      <span className="cv-badge cv-badge-low text-capitalize">{complaint.analysis_state}</span>
                     </div>
                   </div>
-                </>
+                </div>
               ) : (
                 <p className="text-muted small mb-0">Analysis is pending or was not executed.</p>
               )}
             </div>
           </div>
 
-          {/* Linked Master Issue */}
+          {/* Linked Master Issue Card */}
           {linkedIssue && (
-            <div className="card card-shadow mb-4 border-primary">
-              <div className="card-header bg-primary text-white py-2">
-                <h6 className="mb-0 fw-bold">
-                  <i className="bi bi-diagram-3-fill me-1"></i>Linked Master Issue
-                </h6>
+            <div className="cv-card mb-4 border-primary">
+              <div className="cv-card-header bg-white border-bottom border-primary-subtle">
+                <div className="d-flex align-items-center gap-2">
+                  <i className="bi bi-diagram-3 text-primary"></i>
+                  <h6 className="mb-0 fw-bold text-dark">Linked Master Issue</h6>
+                </div>
               </div>
-              <div className="card-body">
-                <h6 className="card-title text-primary">
+              <div className="cv-card-body p-3">
+                <h6 className="fw-semibold text-dark mb-2">
                   {user?.is_handler ? (
                     <Link to={`/admin/issues/${linkedIssue.id}`} className="text-decoration-none">
                       Issue #{linkedIssue.id}: {linkedIssue.title}
@@ -402,12 +401,13 @@ export const ComplaintDetailPage: React.FC = () => {
                     <span>Issue #{linkedIssue.id}: {linkedIssue.title}</span>
                   )}
                 </h6>
-                <div className="small">
-                  <div>
-                    <strong>Status:</strong> <StatusBadge type="status" value={linkedIssue.status} />
+                <div className="small d-flex flex-column gap-1">
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="text-muted">Status:</span>
+                    <StatusBadge type="status" value={linkedIssue.status} />
                   </div>
-                  <div>
-                    <strong>Relationship:</strong> <code>{linkedIssue.relationship_type}</code>
+                  <div className="text-muted">
+                    Relationship: <code className="text-dark">{linkedIssue.relationship_type}</code>
                   </div>
                 </div>
               </div>
@@ -418,4 +418,3 @@ export const ComplaintDetailPage: React.FC = () => {
     </div>
   );
 };
-

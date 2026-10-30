@@ -18,7 +18,6 @@ export const VerifyEmailPage: React.FC = () => {
   const [verifying, setVerifying] = useState<boolean>(false);
   const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // If token is in URL, auto verify
   useEffect(() => {
     if (tokenFromUrl) {
       setVerifying(true);
@@ -51,42 +50,43 @@ export const VerifyEmailPage: React.FC = () => {
   };
 
   return (
-    <div className="row justify-content-center">
-      <div className="col-md-7">
-        <div className="card card-shadow mt-4">
-          <div className="card-body p-4 text-center">
-            <i className="bi bi-envelope-check text-primary" style={{ fontSize: '3rem' }}></i>
-            <h3 className="card-title mt-3">College Email Verification</h3>
+    <div className="row justify-content-center py-4">
+      <div className="col-11 col-sm-9 col-md-7 col-lg-6 col-xl-5">
+        <div className="cv-card">
+          <div className="cv-card-body p-4 text-center">
+            <div className="mb-3">
+              <i className="bi bi-envelope-check text-primary" style={{ fontSize: '2.5rem' }}></i>
+            </div>
+            <h4 className="fw-bold text-dark mb-1">Email Verification</h4>
+            <p className="text-muted small mb-4">
+              Verify campus domain ownership to unlock report submissions
+            </p>
 
             {verifying ? (
               <div className="my-4">
-                <div className="spinner-border text-primary" role="status"></div>
-                <p className="mt-2 text-muted">Verifying single-use token...</p>
+                <div className="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <p className="mt-2 text-muted small">Verifying single-use token...</p>
               </div>
             ) : verificationResult ? (
               <div className="my-4">
                 <div
-                  className={`alert ${verificationResult.success ? 'alert-success' : 'alert-danger'} text-start`}
+                  className={`alert ${verificationResult.success ? 'alert-success' : 'alert-danger'} text-start small mb-3`}
                 >
-                  <h6 className="fw-bold">
-                    <i className={`bi ${verificationResult.success ? 'bi-check-circle' : 'bi-x-circle'} me-2`}></i>
+                  <h6 className="fw-bold mb-1">
+                    <i className={`bi ${verificationResult.success ? 'bi-check-circle' : 'bi-x-circle'} me-1`}></i>
                     {verificationResult.success ? 'Verification Successful' : 'Verification Error'}
                   </h6>
-                  <p className="mb-0 small">{verificationResult.message}</p>
+                  <p className="mb-0">{verificationResult.message}</p>
                 </div>
 
-                {verificationResult.success ? (
-                  <Link to="/my-complaints" className="btn btn-primary px-4 mt-2">
-                    Go to My Submissions
+                {verificationResult.success && (
+                  <Link to="/my-complaints" className="btn btn-primary btn-sm px-4">
+                    Continue to Submissions
                   </Link>
-                ) : (
-                  <p className="small text-muted mt-2">
-                    Please request a new link using the resend form below.
-                  </p>
                 )}
               </div>
             ) : (
-              <p className="text-muted">
+              <p className="text-muted small mb-4">
                 {email ? (
                   <>Verification dispatched to <strong>{email}</strong></>
                 ) : (
@@ -95,40 +95,32 @@ export const VerifyEmailPage: React.FC = () => {
               </p>
             )}
 
-            {/* Mailpit local prototype info banner */}
-            <div className="alert alert-warning text-start my-4">
-              <h6 className="alert-heading fw-bold">
-                <i className="bi bi-gear-wide-connected me-1"></i> Demo / Hackathon SMTP Environment:
-              </h6>
-              <p className="small mb-2">
-                In this demonstration environment, emails are routed through a local Mailpit SMTP server (configured on <code>localhost:1025</code>).
+            {/* Mailpit local demo environment notice */}
+            <div className="cv-card bg-white p-3 text-start mb-4 border-subtle">
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <i className="bi bi-hdd-network text-muted"></i>
+                <span className="fw-semibold text-secondary small">Demo SMTP Mailbox</span>
+              </div>
+              <p className="small text-muted mb-2">
+                In this local hackathon environment, emails are captured by Mailpit. Open your local inbox to click verification links:
               </p>
-              <p className="small mb-0">
-                To view intercepted emails and click the single-use verification link, open the Mailpit web interface:
-                <br />
-                <a href="http://localhost:8025" target="_blank" rel="noreferrer" className="fw-bold text-decoration-underline">
-                  http://localhost:8025
-                </a>
-              </p>
-            </div>
-
-            {/* Security Notes */}
-            <div className="card bg-light border-0 text-start p-3 mb-4">
-              <h6 className="fw-bold small text-secondary mb-2">Security & Verification Policies:</h6>
-              <ul className="small text-secondary mb-0">
-                <li>Complaint submissions are strictly locked until email ownership is proven.</li>
-                <li>Tokens expire in 24 hours and are permanently consumed once used.</li>
-                <li>Raw tokens are never exposed in browser logs or console outputs; only cryptographic hashes are stored.</li>
-              </ul>
+              <a
+                href="http://localhost:8025"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-outline-secondary btn-sm"
+              >
+                <i className="bi bi-box-arrow-up-right me-1"></i>Open Mailpit (localhost:8025)
+              </a>
             </div>
 
             {/* Resend Verification Form */}
             <form onSubmit={handleResend} className="text-start border-top pt-3">
-              <h6 className="fw-semibold text-dark mb-2">Need a new verification link?</h6>
-              {resendStatus && <div className="alert alert-success py-2 small">{resendStatus}</div>}
-              {resendError && <div className="alert alert-danger py-2 small">{resendError}</div>}
+              <label className="form-label small fw-semibold">Need a new verification link?</label>
+              {resendStatus && <div className="alert alert-success py-2 small mb-2">{resendStatus}</div>}
+              {resendError && <div className="alert alert-danger py-2 small mb-2">{resendError}</div>}
 
-              <div className="input-group mb-3">
+              <div className="input-group">
                 <input
                   type="email"
                   className="form-control"
@@ -148,4 +140,3 @@ export const VerifyEmailPage: React.FC = () => {
     </div>
   );
 };
-

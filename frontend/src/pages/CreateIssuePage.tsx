@@ -44,7 +44,6 @@ export const CreateIssuePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // If seedId is present, fetch complaint to pre-fill
   useEffect(() => {
     if (seedId) {
       api.get(`/api/complaints/${seedId}`).then((c) => {
@@ -88,27 +87,34 @@ export const CreateIssuePage: React.FC = () => {
   return (
     <div className="row justify-content-center">
       <div className="col-lg-8">
-        <div className="card card-shadow">
-          <div className="card-header bg-white py-3 border-bottom">
-            <h4 className="mb-0 text-primary">
-              <i className="bi bi-folder-plus me-2"></i>Synthesize Operational Issue
-            </h4>
-            <p className="text-muted small mb-0 mt-1">
+        {/* Back Link */}
+        <div className="mb-3">
+          <Link to="/admin/queue" className="text-decoration-none text-muted small d-inline-flex align-items-center gap-1">
+            <i className="bi bi-arrow-left"></i> Back to Queue
+          </Link>
+        </div>
+
+        <div className="cv-card">
+          <div className="cv-card-header">
+            <h4 className="mb-1 fw-bold text-dark">Synthesize Operational Issue</h4>
+            <p className="text-muted small mb-0">
               Consolidate related complaints into an addressable campus task without modifying original submissions.
             </p>
           </div>
-          <div className="card-body p-4">
+
+          <div className="cv-card-body p-4">
             {seedId && (
               <div className="alert alert-info py-2 small mb-4">
                 <i className="bi bi-info-circle me-1"></i>
                 Pre-filled from seed Complaint #{seedId}. Submitting will link this complaint automatically.
               </div>
             )}
-            {error && <div className="alert alert-danger py-2 small">{error}</div>}
+
+            {error && <div className="alert alert-danger py-2 small mb-4">{error}</div>}
 
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label className="form-label fw-semibold">
+                <label className="form-label">
                   Issue Title <span className="text-danger">*</span>
                 </label>
                 <input
@@ -123,9 +129,9 @@ export const CreateIssuePage: React.FC = () => {
                 />
               </div>
 
-              <div className="row mb-3">
+              <div className="row g-3 mb-3">
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold">
+                  <label className="form-label">
                     Category <span className="text-danger">*</span>
                   </label>
                   <select
@@ -140,7 +146,7 @@ export const CreateIssuePage: React.FC = () => {
                   </select>
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold">
+                  <label className="form-label">
                     Priority <span className="text-danger">*</span>
                   </label>
                   <select
@@ -157,9 +163,9 @@ export const CreateIssuePage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="row mb-3">
+              <div className="row g-3 mb-3">
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold">
+                  <label className="form-label">
                     Building / Location <span className="text-danger">*</span>
                   </label>
                   <select
@@ -174,7 +180,7 @@ export const CreateIssuePage: React.FC = () => {
                   </select>
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label fw-semibold">Room / Area (Optional)</label>
+                  <label className="form-label">Room / Area (Optional)</label>
                   <input
                     type="text"
                     className="form-control"
@@ -187,25 +193,25 @@ export const CreateIssuePage: React.FC = () => {
               </div>
 
               <div className="mb-4">
-                <label className="form-label fw-semibold">
-                  Synthesized Description <span className="text-danger">*</span>
+                <label className="form-label">
+                  Synthesized Public Description <span className="text-danger">*</span>
                 </label>
                 <textarea
                   className="form-control"
                   rows={4}
-                  placeholder="Public/operational summary of the underlying problem..."
+                  placeholder="Public summary of the underlying problem..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   minLength={10}
                   maxLength={4000}
                   required
                 />
-                <div className="form-text small text-muted">
+                <div className="form-text">
                   Avoid copying submitter personal identifying info into the synthesized description.
                 </div>
               </div>
 
-              <div className="d-flex justify-content-between align-items-center pt-2 border-top">
+              <div className="d-flex justify-content-between align-items-center pt-3 border-top">
                 <Link to="/admin/queue" className="btn btn-outline-secondary">
                   Cancel
                 </Link>
@@ -220,4 +226,3 @@ export const CreateIssuePage: React.FC = () => {
     </div>
   );
 };
-
