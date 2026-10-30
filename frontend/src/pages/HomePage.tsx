@@ -42,64 +42,50 @@ export const HomePage: React.FC = () => {
       <div className="row align-items-center py-4 mb-5">
         <div className="col-lg-8">
           <div className="d-inline-flex align-items-center gap-2 cv-badge cv-badge-low mb-3">
-            <span className="text-secondary fw-semibold">Campus Operations Platform</span>
+            <span className="text-secondary fw-semibold">Campus Issue Tracker</span>
           </div>
           <h1 className="display-6 fw-bold text-dark mb-3" style={{ letterSpacing: '-0.03em' }}>
-            Campus Maintenance with Verified Submitter Resolution.
+            Report. Track. Resolve.
           </h1>
           <p className="lead text-secondary mb-4" style={{ fontSize: '1.05rem', maxWidth: '640px' }}>
-            A transparent system for college students and staff to submit maintenance requests, report facilities safety hazards, and independently verify physical repairs with structured resolution feedback.
+            Report campus issues and track their progress.
           </p>
 
           <div className="d-flex flex-wrap gap-2">
-            {user ? (
-              <>
-                <Link to="/new-complaint" className="btn btn-primary d-inline-flex align-items-center gap-2">
-                  <i className="bi bi-plus-lg"></i>
-                  <span>Submit Report</span>
-                </Link>
-                <Link to="/my-complaints" className="btn btn-outline-secondary">
-                  My Submissions
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link to="/register" className="btn btn-primary">
-                  Register with College Email
-                </Link>
-                <Link to="/login" className="btn btn-outline-secondary">
-                  Log In
-                </Link>
-              </>
-            )}
+            <Link to="/new-complaint" className="btn btn-primary d-inline-flex align-items-center gap-2">
+              <i className="bi bi-plus-lg"></i>
+              <span>Submit Report</span>
+            </Link>
+            <Link to={user ? "/my-complaints" : "/login"} className="btn btn-outline-secondary">
+              My Reports
+            </Link>
           </div>
         </div>
 
-        {/* Live Metrics Widget */}
+        {/* Overview Metrics Widget */}
         <div className="col-lg-4 mt-4 mt-lg-0">
           <div className="cv-card p-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <span className="small fw-semibold text-secondary text-uppercase" style={{ letterSpacing: '0.04em' }}>
-                System Activity
+                Campus Overview
               </span>
-              <span className="cv-badge cv-badge-normal">Live</span>
             </div>
 
             <div className="d-flex justify-content-between align-items-baseline py-2 border-bottom">
-              <span className="small text-secondary">Total Submissions</span>
+              <span className="small text-secondary">Reports</span>
               <span className="fw-bold text-dark fs-5">{stats.total_submissions}</span>
             </div>
             <div className="d-flex justify-content-between align-items-baseline py-2 border-bottom">
-              <span className="small text-secondary">Distinct Operational Issues</span>
+              <span className="small text-secondary">Issues</span>
               <span className="fw-bold text-dark fs-5">{stats.distinct_issues}</span>
             </div>
             <div className="d-flex justify-content-between align-items-baseline py-2 mb-3">
-              <span className="small text-secondary">Resolved Issues</span>
+              <span className="small text-secondary">Resolved</span>
               <span className="fw-bold text-success fs-5">{stats.resolved_issues}</span>
             </div>
 
             <Link to="/public-issues" className="btn btn-sm btn-outline-secondary w-100">
-              Browse Public Board &rarr;
+              View Issues
             </Link>
           </div>
         </div>
@@ -112,10 +98,11 @@ export const HomePage: React.FC = () => {
             <div className="text-primary mb-3">
               <i className="bi bi-check2-circle fs-3"></i>
             </div>
-            <h5 className="fw-bold text-dark mb-2 fs-6">Verified Resolution Feedback</h5>
-            <p className="text-secondary small mb-0">
-              Administrative closures remain provisional until original submitters independently evaluate physical repairs as Fixed, Partially fixed, or Not fixed.
-            </p>
+            <h5 className="fw-bold text-dark mb-2 fs-6">Resolution Feedback</h5>
+            <ul className="text-secondary small mb-0 ps-3">
+              <li>Review the reported fix.</li>
+              <li>Mark fixed, partial, or not fixed.</li>
+            </ul>
           </div>
         </div>
 
@@ -124,10 +111,11 @@ export const HomePage: React.FC = () => {
             <div className="text-primary mb-3">
               <i className="bi bi-shield-lock fs-3"></i>
             </div>
-            <h5 className="fw-bold text-dark mb-2 fs-6">Identity-Restricted Privacy</h5>
-            <p className="text-secondary small mb-0">
-              Submitter personal details are masked in operational queues. Disclosures require an explicitly audited justification recorded before information retrieval.
-            </p>
+            <h5 className="fw-bold text-dark mb-2 fs-6">Protected Identity</h5>
+            <ul className="text-secondary small mb-0 ps-3">
+              <li>Identity hidden in public views.</li>
+              <li>Restricted access with audit history.</li>
+            </ul>
           </div>
         </div>
 
@@ -136,10 +124,11 @@ export const HomePage: React.FC = () => {
             <div className="text-primary mb-3">
               <i className="bi bi-diagram-3 fs-3"></i>
             </div>
-            <h5 className="fw-bold text-dark mb-2 fs-6">Reversible Semantic Grouping</h5>
-            <p className="text-secondary small mb-0">
-              Duplicate reports are clustered into underlying master tasks using multilingual embeddings and structured room proximity without deleting original submissions.
-            </p>
+            <h5 className="fw-bold text-dark mb-2 fs-6">Related Reports</h5>
+            <ul className="text-secondary small mb-0 ps-3">
+              <li>Review similar reports together.</li>
+              <li>Keep original submissions.</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -152,7 +141,7 @@ export const HomePage: React.FC = () => {
             <small className="text-muted">Approved summaries of campus issues currently tracked by facilities.</small>
           </div>
           <Link to="/public-issues" className="btn btn-sm btn-outline-secondary">
-            View All Issues
+            View Issues
           </Link>
         </div>
 

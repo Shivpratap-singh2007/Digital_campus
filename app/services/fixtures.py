@@ -9,11 +9,17 @@ from app.models.complaint import Complaint
 from app.models.issue import Issue, IssueComplaintLink, StatusEvent
 from app.models.feedback import ResolutionRound, ResolutionFeedback
 from app.services.complaint_analysis import run_complaint_analysis
+from app.services.security import validate_password_strength
 
 logger = logging.getLogger(__name__)
 
 
-def provision_synthetic_fixtures(app=None) -> dict:
+def provision_synthetic_fixtures(
+    app=None,
+    admin_password: str = None,
+    handler_password: str = None,
+    student_password: str = None,
+) -> dict:
     """
     Provisions synthetic test fixture accounts and baseline records:
     1. Synthetic Student A (verified)
@@ -24,8 +30,8 @@ def provision_synthetic_fixtures(app=None) -> dict:
 
     Safety & Integrity Guarantees:
     - Marked with is_synthetic_fixture=True.
-    - Credentials loaded strictly from environment variables (with safe local fallbacks).
-    - Idempotent: If account exists, leaves password unchanged (does not overwrite on restart).
+    - Credentials loaded strictly from environment variables or explicit parameters (no hardcoded defaults).
+    - Idempotent: If account exists with the correct role, leaves password unchanged (does not overwrite on restart).
     - Fail-safe conflict handling: If existing user has a conflicting role, refuses to silently promote.
     - Idempotent fixture issues: Only provisions baseline issues/complaints if not already present.
     """
@@ -47,14 +53,35 @@ def provision_synthetic_fixtures(app=None) -> dict:
             "created": [],
             "preserved": [],
             "conflicts": [],
+            "skipped": [],
         }
+
+        resolved_admin_pw = (
+            admin_password
+            or os.environ.get("FIXTURE_ADMIN_PASSWORD")
+            or os.environ.get("ADMIN_PASSWORD")
+            or ""
+        ).strip()
+        resolved_handler_pw = (
+            handler_password
+            or os.environ.get("FIXTURE_HANDLER_PASSWORD")
+            or os.environ.get("HANDLER_PASSWORD")
+            or ""
+        ).strip()
+        resolved_student_pw = (
+            student_password
+            or os.environ.get("FIXTURE_STUDENT_PASSWORD")
+            or os.environ.get("STUDENT_PASSWORD")
+            or os.environ.get("FIXTURE_STUDENT_A_PASSWORD")
+            or ""
+        ).strip()
 
         # 1. Fixture Account Definitions
         fixture_configs = [
             {
                 "key": "admin",
                 "email": os.environ.get("FIXTURE_ADMIN_EMAIL", "admin@campus.edu").strip().lower(),
-                "password": os.environ.get("FIXTURE_ADMIN_PASSWORD", "AdminPass123!"),
+                "password": resolved_admin_pw,
                 "full_name": os.environ.get("FIXTURE_ADMIN_NAME", "Campus Facilities Director"),
                 "role": "admin",
                 "is_verified": True,
@@ -62,7 +89,7 @@ def provision_synthetic_fixtures(app=None) -> dict:
             {
                 "key": "handler",
                 "email": os.environ.get("FIXTURE_HANDLER_EMAIL", "handler@campus.edu").strip().lower(),
-                "password": os.environ.get("FIXTURE_HANDLER_PASSWORD", "HandlerPass123!"),
+                "password": resolved_handler_pw,
                 "full_name": os.environ.get("FIXTURE_HANDLER_NAME", "Campus Maintenance Desk"),
                 "role": "handler",
                 "is_verified": True,
@@ -70,7 +97,7 @@ def provision_synthetic_fixtures(app=None) -> dict:
             {
                 "key": "student_a",
                 "email": os.environ.get("FIXTURE_STUDENT_A_EMAIL", "student.aarav@campus.edu").strip().lower(),
-                "password": os.environ.get("FIXTURE_STUDENT_A_PASSWORD", "StudentPass123!"),
+                "password": resolved_student_pw,
                 "full_name": os.environ.get("FIXTURE_STUDENT_A_NAME", "Aarav Sharma"),
                 "role": "user",
                 "is_verified": True,
@@ -78,7 +105,7 @@ def provision_synthetic_fixtures(app=None) -> dict:
             {
                 "key": "student_b",
                 "email": os.environ.get("FIXTURE_STUDENT_B_EMAIL", "student.priya@campus.edu").strip().lower(),
-                "password": os.environ.get("FIXTURE_STUDENT_B_PASSWORD", "StudentPass123!"),
+                "password": resolved_student_pw,
                 "full_name": os.environ.get("FIXTURE_STUDENT_B_NAME", "Priya Patel"),
                 "role": "user",
                 "is_verified": True,
@@ -86,7 +113,7 @@ def provision_synthetic_fixtures(app=None) -> dict:
             {
                 "key": "unverified",
                 "email": os.environ.get("FIXTURE_UNVERIFIED_EMAIL", "student.unverified@campus.edu").strip().lower(),
-                "password": os.environ.get("FIXTURE_UNVERIFIED_PASSWORD", "StudentPass123!"),
+                "password": resolved_student_pw,
                 "full_name": os.environ.get("FIXTURE_UNVERIFIED_NAME", "Unverified Student"),
                 "role": "user",
                 "is_verified": False,
@@ -114,6 +141,22 @@ def provision_synthetic_fixtures(app=None) -> dict:
                     results["preserved"].append({"key": cfg["key"], "email": email, "role": existing.role})
                 users_by_key[cfg["key"]] = existing
             else:
+                if not cfg["password"]:
+                    msg = (
+                        f"Password for '{cfg['key']}' ({email}) not provided via environment "
+                        f"(FIXTURE_{cfg['key'].upper()}_PASSWORD) or parameters. Skipping creation."
+                    )
+                    logger.warning(f"[FIXTURE SKIPPED] {msg}")
+                    results["skipped"].append({"key": cfg["key"], "email": email, "reason": msg})
+                    continue
+
+                valid_pw, pw_err = validate_password_strength(cfg["password"])
+                if not valid_pw:
+                    msg = f"Password for '{cfg['key']}' ({email}) does not meet requirements: {pw_err}"
+                    logger.warning(f"[FIXTURE CONFLICT] {msg}")
+                    results["conflicts"].append({"email": email, "reason": msg})
+                    continue
+
                 user = User(
                     email=email,
                     full_name=cfg["full_name"],

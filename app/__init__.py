@@ -48,6 +48,15 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
     app.register_blueprint(cli_bp)
 
+    # Safe auto-initialization for fresh ephemeral deployments when explicitly enabled
+    bootstrap_enabled = os.environ.get("BOOTSTRAP_DEMO_DATA", "").lower() in ("true", "1", "yes") or \
+                        os.environ.get("DEMO_MODE", "").lower() in ("true", "1", "yes")
+    if bootstrap_enabled:
+        with app.app_context():
+            db.create_all()
+            from app.services.fixtures import provision_synthetic_fixtures
+            provision_synthetic_fixtures(app)
+
     # Health check endpoints for Railway / container orchestrators
     @app.route("/api/health", methods=["GET"])
     def api_health():
