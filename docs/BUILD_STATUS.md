@@ -52,3 +52,13 @@
 - [x] Redesigned clean authentication flows (`LoginPage.tsx`, `RegisterPage.tsx`, `VerifyEmailPage.tsx`)
 - [x] Production bundle recompiled and verified (`frontend/dist`)
 - [x] All 16 backend integration & unit tests verified passing
+
+### Phase 6: Comprehensive Security Hardening & Vulnerability Mitigation
+- [x] **API Keys & Secrets Protection:** Cryptographically random fallback `secrets.token_hex(32)`, isolated `.env.example` template without secrets, verified `.gitignore` blocks `.env`.
+- [x] **OWASP Security Headers:** Content-Security-Policy (CSP), X-Frame-Options (DENY), X-Content-Type-Options (nosniff), Referrer-Policy, Permissions-Policy, HSTS for secure deployments.
+- [x] **Role-Based Access Control (RBAC):** Strict `@admin_required`, `@handler_required`, and `@verified_user_required` decorators across all `/api/admin/*`, `/api/issues/*`, and `/api/complaints/*` endpoints.
+- [x] **Anti-XSS Input Sanitization:** Centralized entity escaping (`<`, `>`, `&`, `"`, `'`) and control character stripping for all user-submitted titles, descriptions, and comments.
+- [x] **In-Memory Sliding Window Rate Limiting:** Thread-safe burst protection on login, registration, verification, complaint creation, issues, feedback, and identity reveal routes.
+- [x] **Insecure Direct Object Reference (IDOR) Defenses:** Restricted complaint access and attachment serving strictly to original submitter or authenticated handlers.
+- [x] **Database & Password Hardening:** Parameterized ORM queries immune to SQL injection, NIST-compliant password strength enforcement (length, upper, lower, numbers/symbols, common password blacklist).
+- [x] **Automated Security Verification Suite:** 7 dedicated security test suites added (`tests/test_security.py`), bringing total passing tests to 23 / 23.

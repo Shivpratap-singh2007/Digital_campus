@@ -1,12 +1,16 @@
+import os
 import uuid
 from flask import jsonify, request, current_app, send_from_directory, abort
 from flask_login import login_required, current_user
+from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.blueprints.api import api_bp
 from app.models.complaint import Complaint, Attachment, AnalysisResult
 from app.models.issue import StatusEvent
 from app.services.image import validate_and_process_image
 from app.services.complaint_analysis import run_complaint_analysis
+from app.services.rate_limiter import rate_limit
+from app.services.security import sanitize_text, verified_user_required, handler_required
 
 
 @api_bp.route("/complaints", methods=["GET"])
@@ -43,6 +47,8 @@ def list_complaints():
 
 @api_bp.route("/complaints", methods=["POST"])
 @login_required
+@verified_user_required
+@rate_limit(limit=15, window_seconds=60, key_prefix="complaint")
 def create_complaint():
     """
     Submits a complaint or suggestion:
@@ -52,11 +58,6 @@ def create_complaint():
     - Validates inputs and optional image using Pillow.
     - Commits complaint with analysis_state='pending' before analysis.
     """
-    if not current_user.is_verified and current_user.role == "user":
-        return jsonify({
-            "error": "Email verification required. You must verify your college email before submitting."
-        }), 403
-
     # Support multipart/form-data or JSON
     if request.is_json:
         payload = request.get_json() or {}
@@ -65,12 +66,12 @@ def create_complaint():
         payload = request.form
         image_file = request.files.get("image")
 
-    title = (payload.get("title") or "").strip()
-    description = (payload.get("description") or "").strip()
+    title = sanitize_text(payload.get("title") or "")
+    description = sanitize_text(payload.get("description") or "")
     submission_type = payload.get("submission_type") or "complaint"
-    user_category = payload.get("user_category") or "Not sure"
-    building = (payload.get("building") or "").strip()
-    room = (payload.get("room") or "").strip() or None
+    user_category = sanitize_text(payload.get("user_category") or "Not sure")
+    building = sanitize_text(payload.get("building") or "")
+    room = sanitize_text(payload.get("room") or "") or None
     submission_key = (payload.get("submission_key") or payload.get("idempotency_token") or "").strip()
 
     if not submission_key:
@@ -286,22 +287,21 @@ def get_complaint(complaint_id):
 @login_required
 def serve_attachment(filename):
     """Secure, authorized file server for attachments."""
-    attachment = Attachment.query.filter_by(filename=filename).first_or_404()
+    safe_filename = secure_filename(os.path.basename(filename))
+    attachment = Attachment.query.filter_by(filename=safe_filename).first_or_404()
     complaint = attachment.complaint
 
     if complaint.user_id != current_user.id and not current_user.is_handler:
         abort(403)
 
-    return send_from_directory(current_app.config["UPLOAD_FOLDER"], filename)
+    return send_from_directory(current_app.config["UPLOAD_FOLDER"], safe_filename)
 
 
 @api_bp.route("/complaints/<int:complaint_id>/retry-analysis", methods=["POST"])
 @login_required
+@handler_required
 def retry_analysis(complaint_id):
     """Handler action to re-run AI and rule analysis."""
-    if not current_user.is_handler:
-        abort(403)
-
     complaint = Complaint.query.get_or_404(complaint_id)
     success = run_complaint_analysis(complaint)
     return jsonify({

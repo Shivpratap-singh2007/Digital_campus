@@ -4,6 +4,8 @@ from flask_wtf.csrf import generate_csrf
 from app.extensions import db
 from app.blueprints.api import api_bp
 from app.models.user import User
+from app.services.rate_limiter import rate_limit
+from app.services.security import sanitize_text, validate_password_strength
 from app.services.email import (
     create_verification_token,
     send_verification_email,
@@ -40,9 +42,10 @@ def get_current_user():
 
 
 @api_bp.route("/auth/register", methods=["POST"])
+@rate_limit(limit=10, window_seconds=60, key_prefix="register")
 def register():
     data = request.get_json() or {}
-    full_name = (data.get("full_name") or "").strip()
+    full_name = sanitize_text(data.get("full_name") or "")
     email = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
 
@@ -64,8 +67,9 @@ def register():
             "error": f"Registration is restricted to authorized college domains only ({allowed_list})."
         }), 400
 
-    if not password or len(password) < 8:
-        return jsonify({"error": "Password must be at least 8 characters long."}), 400
+    valid_pw, pw_msg = validate_password_strength(password)
+    if not valid_pw:
+        return jsonify({"error": pw_msg}), 400
 
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "An account with this email address is already registered."}), 400
@@ -99,6 +103,7 @@ def register():
 
 
 @api_bp.route("/auth/login", methods=["POST"])
+@rate_limit(limit=15, window_seconds=60, key_prefix="login")
 def login():
     data = request.get_json() or {}
     email = (data.get("email") or "").strip().lower()
@@ -132,6 +137,7 @@ def logout():
 
 
 @api_bp.route("/auth/verify/<token>", methods=["GET", "POST"])
+@rate_limit(limit=30, window_seconds=60, key_prefix="verify")
 def verify(token):
     success, message, user = verify_token(token)
     if not success:
@@ -145,6 +151,7 @@ def verify(token):
 
 
 @api_bp.route("/auth/resend-verification", methods=["POST"])
+@rate_limit(limit=5, window_seconds=60, key_prefix="resend")
 def resend_verification():
     data = request.get_json() or {}
     email = (data.get("email") or "").strip().lower()

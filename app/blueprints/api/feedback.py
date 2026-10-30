@@ -4,10 +4,13 @@ from app.extensions import db
 from app.blueprints.api import api_bp
 from app.models.issue import Issue
 from app.models.feedback import ResolutionFeedback
+from app.services.security import sanitize_text
+from app.services.rate_limiter import rate_limit
 
 
 @api_bp.route("/feedback/issue/<int:issue_id>", methods=["POST"])
 @login_required
+@rate_limit(limit=10, window_seconds=60, key_prefix="feedback")
 def submit_resolution_feedback(issue_id):
     """
     Records verified submitter feedback on a resolved issue:
@@ -38,7 +41,7 @@ def submit_resolution_feedback(issue_id):
 
     data = request.get_json() or {}
     response_val = data.get("response")
-    comments_val = (data.get("comments") or "").strip() or None
+    comments_val = sanitize_text(data.get("comments") or "") or None
 
     valid_responses = ("fixed", "partially_fixed", "not_fixed")
     if response_val not in valid_responses:

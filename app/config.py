@@ -1,4 +1,5 @@
 import os
+import secrets
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -6,7 +7,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 class Config:
     """Base application configuration."""
-    SECRET_KEY = os.environ.get("SECRET_KEY", "campusvoice-dev-secret-key-change-in-production-1234567890")
+    # Cryptographically strong secret key fallback if not provided in environment
+    SECRET_KEY = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+    WTF_CSRF_SECRET_KEY = os.environ.get("WTF_CSRF_SECRET_KEY") or SECRET_KEY
+    WTF_CSRF_TIME_LIMIT = 3600 * 4  # 4-hour CSRF token validity
+
+    # Session & Cookie Security
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() in ("true", "1", "yes")
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
+
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL", f"sqlite:///{BASE_DIR / 'campusvoice.db'}"
     )
@@ -39,6 +52,10 @@ class Config:
     TOKEN_EXPIRATION_HOURS = int(os.environ.get("TOKEN_EXPIRATION_HOURS", 24))
     RESEND_COOLDOWN_SECONDS = int(os.environ.get("RESEND_COOLDOWN_SECONDS", 60))
     MAX_VERIFICATION_ATTEMPTS = int(os.environ.get("MAX_VERIFICATION_ATTEMPTS", 5))
+
+    # Rate limiting thresholds
+    AUTH_RATE_LIMIT = int(os.environ.get("AUTH_RATE_LIMIT", 10))
+    SUBMISSION_RATE_LIMIT = int(os.environ.get("SUBMISSION_RATE_LIMIT", 15))
 
     # Semantic analysis
     MODEL_NAME = os.environ.get(

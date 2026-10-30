@@ -8,10 +8,13 @@ from app.models.issue import Issue
 from app.models.feedback import ResolutionRound
 from app.models.audit import AuditEvent
 from app.services.audit import reveal_complaint_submitter
+from app.services.security import admin_required, handler_required, sanitize_text
+from app.services.rate_limiter import rate_limit
 
 
 @api_bp.route("/admin/queue", methods=["GET"])
 @login_required
+@handler_required
 def admin_queue():
     """
     Returns complaints for handler review.
@@ -82,6 +85,8 @@ def admin_queue():
 
 @api_bp.route("/admin/complaint/<int:complaint_id>/reveal-identity", methods=["POST"])
 @login_required
+@admin_required
+@rate_limit(limit=15, window_seconds=60, key_prefix="reveal_id")
 def admin_reveal_identity(complaint_id):
     """
     Audited identity reveal:
@@ -91,11 +96,8 @@ def admin_reveal_identity(complaint_id):
     - If audit commit fails, aborts without disclosing.
     - Audit log does not store disclosed PII redundantly.
     """
-    if not current_user.is_admin:
-        abort(403)
-
     data = request.get_json() or {}
-    justification = (data.get("justification") or "").strip()
+    justification = sanitize_text(data.get("justification") or "")
 
     success, message, info = reveal_complaint_submitter(
         admin_user=current_user,
@@ -115,16 +117,14 @@ def admin_reveal_identity(complaint_id):
 
 @api_bp.route("/admin/complaint/<int:complaint_id>/set-final-attributes", methods=["POST"])
 @login_required
+@handler_required
 def set_final_attributes(complaint_id):
     """Handler action to assign final category and priority."""
-    if not current_user.is_handler:
-        abort(403)
-
     complaint = Complaint.query.get_or_404(complaint_id)
     data = request.get_json() or {}
 
-    final_cat = (data.get("final_category") or "").strip()
-    final_prio = (data.get("final_priority") or "").strip()
+    final_cat = sanitize_text(data.get("final_category") or "")
+    final_prio = sanitize_text(data.get("final_priority") or "")
 
     if final_cat:
         complaint.final_category = final_cat
@@ -143,11 +143,9 @@ def set_final_attributes(complaint_id):
 
 @api_bp.route("/admin/dashboard", methods=["GET"])
 @login_required
+@handler_required
 def admin_dashboard():
     """Live operational metrics strictly computed from SQLite database."""
-    if not current_user.is_handler:
-        abort(403)
-
     total_submissions = Complaint.query.count()
     distinct_issues = Issue.query.count()
     unresolved_issues = Issue.query.filter(Issue.status != "resolved").count()
@@ -203,11 +201,9 @@ def admin_dashboard():
 
 @api_bp.route("/admin/audit-log", methods=["GET"])
 @login_required
+@admin_required
 def admin_audit_log():
     """Immutable audit log of privileged operations."""
-    if not current_user.is_admin:
-        abort(403)
-
     events = AuditEvent.query.order_by(AuditEvent.created_at.desc()).limit(100).all()
     data = [{
         "id": ev.id,

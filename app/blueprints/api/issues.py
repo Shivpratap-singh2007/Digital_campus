@@ -7,6 +7,8 @@ from app.models.issue import Issue, IssueComplaintLink, StatusEvent
 from app.models.complaint import Complaint
 from app.models.feedback import ResolutionRound
 from app.services.semantic import semantic_engine
+from app.services.security import handler_required, sanitize_text
+from app.services.rate_limiter import rate_limit
 
 
 @api_bp.route("/issues", methods=["GET"])
@@ -54,18 +56,17 @@ def list_issues():
 
 @api_bp.route("/issues", methods=["POST"])
 @login_required
+@handler_required
+@rate_limit(limit=20, window_seconds=60, key_prefix="create_issue")
 def create_issue():
     """Handler action: creates an operational synthesized issue."""
-    if not current_user.is_handler:
-        abort(403)
-
     data = request.get_json() or {}
-    title = (data.get("title") or "").strip()
-    description = (data.get("description") or "").strip()
-    category = data.get("category") or "Infrastructure"
-    building = (data.get("building") or "").strip()
-    room = (data.get("room") or "").strip() or None
-    priority = data.get("priority") or "Normal"
+    title = sanitize_text(data.get("title") or "")
+    description = sanitize_text(data.get("description") or "")
+    category = sanitize_text(data.get("category") or "Infrastructure")
+    building = sanitize_text(data.get("building") or "")
+    room = sanitize_text(data.get("room") or "") or None
+    priority = sanitize_text(data.get("priority") or "Normal")
     seed_complaint_id = data.get("seed_complaint_id")
 
     if not title or len(title) < 5:
@@ -124,11 +125,9 @@ def create_issue():
 
 @api_bp.route("/issues/<int:issue_id>", methods=["GET"])
 @login_required
+@handler_required
 def get_issue(issue_id):
     """Retrieves issue details with linked reports, status events, and AI recommendations."""
-    if not current_user.is_handler:
-        abort(403)
-
     issue = Issue.query.get_or_404(issue_id)
 
     # Linked complaints
@@ -236,15 +235,13 @@ def get_issue(issue_id):
 
 @api_bp.route("/issues/<int:issue_id>/status", methods=["POST"])
 @login_required
+@handler_required
 def update_status(issue_id):
     """Updates operational status; requires non-empty resolution note when resolving."""
-    if not current_user.is_handler:
-        abort(403)
-
     issue = Issue.query.get_or_404(issue_id)
     data = request.get_json() or {}
     new_status = data.get("new_status")
-    note = (data.get("note") or "").strip()
+    note = sanitize_text(data.get("note") or "")
 
     valid_statuses = ("submitted", "under_review", "in_progress", "resolved")
     if new_status not in valid_statuses:
@@ -308,11 +305,9 @@ def update_status(issue_id):
 
 @api_bp.route("/issues/<int:issue_id>/link", methods=["POST"])
 @login_required
+@handler_required
 def link_complaint(issue_id):
     """Links a complaint to this issue as same_incident or related_only."""
-    if not current_user.is_handler:
-        abort(403)
-
     issue = Issue.query.get_or_404(issue_id)
     data = request.get_json() or {}
     complaint_id = data.get("complaint_id")
@@ -352,11 +347,9 @@ def link_complaint(issue_id):
 
 @api_bp.route("/issues/<int:issue_id>/unlink/<int:complaint_id>", methods=["POST"])
 @login_required
+@handler_required
 def unlink_complaint(issue_id, complaint_id):
     """Reversible grouping: unlinks a complaint, restoring it without data loss."""
-    if not current_user.is_handler:
-        abort(403)
-
     issue = Issue.query.get_or_404(issue_id)
     link = IssueComplaintLink.query.filter_by(issue_id=issue.id, complaint_id=complaint_id).first_or_404()
 
