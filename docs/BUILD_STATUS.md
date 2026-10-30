@@ -69,3 +69,11 @@
 - [x] **Account & Settings Page:** Created `SettingsPage.tsx` with user account details, verification badge, system capability summary, and working logout action.
 - [x] **Mobile Safe Area & Content Padding:** Integrated `env(safe-area-inset-bottom)` and matching bottom clearance (`.has-bottom-nav .main-container`).
 - [x] **Production Build & Verification:** Zero compilation warnings, 23/23 tests passing.
+
+### Phase 8: PythonAnywhere & Production Cloud Deployment
+- [x] **Flask Single-Origin SPA Routing:** Configured dual-mode catch-all in `app/__init__.py`; serves prebuilt React bundle for all client routes, while returning JSON 404 for unknown `/api/*` endpoints.
+- [x] **Health Check Endpoints:** Created dedicated `/api/health` and `/healthz` endpoints returning JSON status 200.
+- [x] **PythonAnywhere WSGI Configuration:** Authored `pythonanywhere_wsgi.py` template with explicit `/home/<username>/` paths and persistent storage outside web roots.
+- [x] **Quota-Optimized Dependencies:** Created `requirements-pythonanywhere.txt` (~45MB) for 512MB free tier accounts with optional ML upgrade paths.
+- [x] **Standalone Deployment Bundle:** Verified package extraction (`campusvoice_pythonanywhere.zip` at 0.62 MB) without requiring GitHub integration.
+- [x] **Verification Suite:** 25 / 25 pytest unit & security tests passing.

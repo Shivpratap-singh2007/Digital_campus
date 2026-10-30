@@ -47,6 +47,15 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
     app.register_blueprint(cli_bp)
 
+    # Health check endpoints for Railway / container orchestrators
+    @app.route("/api/health", methods=["GET"])
+    def api_health():
+        return jsonify({"status": "healthy", "service": "campusvoice"}), 200
+
+    @app.route("/healthz", methods=["GET"])
+    def healthz():
+        return jsonify({"status": "healthy", "service": "campusvoice"}), 200
+
     # Static assets and SPA routes for built React frontend
     frontend_dist = os.path.abspath(os.path.join(app.root_path, "..", "frontend", "dist"))
     if os.path.exists(frontend_dist):
@@ -55,19 +64,28 @@ def create_app(config_class=Config):
             assets_dir = os.path.join(frontend_dist, "assets")
             return send_from_directory(assets_dir, path)
 
-        @app.route("/login")
-        @app.route("/register")
-        @app.route("/verify-email")
-        @app.route("/my-complaints")
-        @app.route("/new-complaint")
-        @app.route("/complaints/<int:complaint_id>")
-        @app.route("/admin/queue")
-        @app.route("/admin/create-issue")
-        @app.route("/admin/issues/<int:issue_id>")
-        @app.route("/admin/dashboard")
-        @app.route("/admin/audit-log")
-        def serve_react_pages(**kwargs):
+        @app.route("/", defaults={"path": ""})
+        @app.route("/<path:path>")
+        def serve_react_spa(path):
+            # Unknown /api routes MUST return 404 JSON, never index.html
+            if path.startswith("api/") or path == "api":
+                abort(404)
+            # Missing assets must return 404, never index.html
+            if path.startswith("assets/"):
+                abort(404)
+            # Directly serve root static files if they exist (e.g. favicon, robots.txt)
+            target = os.path.join(frontend_dist, path)
+            if path and os.path.isfile(target):
+                return send_from_directory(frontend_dist, path)
+            # Default to index.html for React Router client routes and refreshes
             return send_from_directory(frontend_dist, "index.html")
+
+    # Support reverse proxy headers (e.g. Railway, Nginx, Envoy)
+    try:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    except Exception:
+        pass
 
     # Security response headers (OWASP standard recommendations)
     @app.after_request

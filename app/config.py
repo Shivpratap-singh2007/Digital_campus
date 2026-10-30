@@ -20,10 +20,22 @@ class Config:
     REMEMBER_COOKIE_SAMESITE = "Lax"
     REMEMBER_COOKIE_SECURE = SESSION_COOKIE_SECURE
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", f"sqlite:///{BASE_DIR / 'campusvoice.db'}"
-    )
+    # Database Configuration (supports explicit SQLITE_PATH or DATABASE_URL)
+    sqlite_path_env = os.environ.get("SQLITE_PATH")
+    db_env = os.environ.get("DATABASE_URL")
+    if sqlite_path_env:
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{sqlite_path_env}"
+    elif db_env:
+        if db_env.startswith("postgres://"):
+            db_env = db_env.replace("postgres://", "postgresql://", 1)
+        SQLALCHEMY_DATABASE_URI = db_env
+    else:
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{BASE_DIR / 'campusvoice.db'}"
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Public base URL (e.g. https://campusvoice.up.railway.app) for links in verification emails
+    PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
 
     # Allowed email domains (exact domain match, not substring)
     COLLEGE_EMAIL_DOMAINS = [

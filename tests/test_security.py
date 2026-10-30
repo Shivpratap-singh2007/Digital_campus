@@ -149,3 +149,26 @@ def test_rate_limiting_enforcement():
     allowed, retry_after = limiter.is_allowed(key, limit=limit, window_seconds=window)
     assert allowed is False
     assert retry_after > 0
+
+
+def test_unknown_api_route_returns_json_404(client):
+    """Verifies that unknown /api/* requests return JSON 404, never an HTML SPA template."""
+    res = client.get("/api/nonexistent-endpoint-test")
+    assert res.status_code == 404
+    assert res.is_json
+    data = res.get_json()
+    assert "error" in data
+    assert data["error"] == "Resource not found."
+
+
+def test_health_check_endpoints(client):
+    """Verifies that /api/health and /healthz return status 200 with JSON health report."""
+    res_api = client.get("/api/health")
+    assert res_api.status_code == 200
+    assert res_api.is_json
+    assert res_api.get_json()["status"] == "healthy"
+
+    res_root = client.get("/healthz")
+    assert res_root.status_code == 200
+    assert res_root.is_json
+    assert res_root.get_json()["status"] == "healthy"

@@ -1,0 +1,14 @@
+# CampusVoice dependencies optimized for PythonAnywhere
+# Fits within PythonAnywhere 512MB Free Tier quota (~45MB total install)
+flask>=3.0.0
+flask-sqlalchemy>=3.1.1
+flask-login>=0.6.3
+flask-wtf>=1.2.1
+email-validator>=2.1.0
+pillow>=10.2.0
+python-dotenv>=1.0.1
+numpy>=1.26.0
+
+# Optional: For Paid PythonAnywhere accounts with >=2GB disk quota & outbound internet:
+# pip install torch --index-url https://download.pytorch.org/whl/cpu
+# pip install sentence-transformers>=3.0.0

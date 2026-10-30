@@ -60,7 +60,11 @@ def send_verification_email(user: User, raw_token: str) -> tuple[bool, str]:
     Works with local Mailpit or standard SMTP servers.
     Does NOT log the raw token.
     """
-    verify_url = url_for("auth.verify_email", token=raw_token, _external=True)
+    public_base_url = current_app.config.get("PUBLIC_BASE_URL", "").rstrip("/")
+    if public_base_url:
+        verify_url = f"{public_base_url}/auth/verify/{raw_token}"
+    else:
+        verify_url = url_for("auth.verify_email", token=raw_token, _external=True)
     
     server_host = current_app.config.get("SMTP_SERVER", "localhost")
     server_port = current_app.config.get("SMTP_PORT", 1025)
