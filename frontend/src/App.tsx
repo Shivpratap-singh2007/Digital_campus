@@ -135,13 +135,10 @@ export const App: React.FC = () => {
           </div>
         </main>
 
-        <footer className="footer mt-auto">
+        <footer className="footer mt-auto py-3">
           <div className="container text-center">
-            <p className="mb-1 text-muted">
+            <p className="mb-0 text-muted">
               <strong>CampusVoice</strong> — Campus Complaints with Verified Resolution Feedback
-            </p>
-            <p className="mb-0 text-secondary small">
-              24-Hour Hackathon Project &bull; Verified College Domains Only &bull; Strict Role-Based Privacy &bull; Semantic & Rule Prioritization
             </p>
           </div>
         </footer>
