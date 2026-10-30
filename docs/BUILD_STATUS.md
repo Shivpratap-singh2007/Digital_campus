@@ -43,7 +43,7 @@
 - [x] Design token architecture (`--bg-app`, `--bg-surface`, `--text-primary`, `--border-subtle`, `--brand-dark`, soft status badge tints)
 - [x] Typography system using Inter font family with crisp font weights, line heights, and negative letter-spacing
 - [x] Modern minimalist component library: `.cv-card`, `.cv-table`, `.cv-badge-*`, `.stat-widget`
-- [x] Redesigned top banners (`EmergencyBanner.tsx`) and crisp light navigation header (`Navbar.tsx`)
+- [x] Crisp light minimalist navigation header (`Navbar.tsx`) with zero persistent banner clutter
 - [x] Redesigned editorial landing page (`HomePage.tsx`) with live operational activity widget and feature pillars
 - [x] Redesigned public transparency board (`PublicIssuesPage.tsx`) with search, category filtering, and status filters
 - [x] Redesigned user reporting workflows (`MyComplaintsPage.tsx`, `NewComplaintPage.tsx`, `ComplaintDetailPage.tsx`)

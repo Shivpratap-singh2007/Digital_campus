@@ -13,6 +13,12 @@
                 </p>
             </div>
             <div class="card-body p-4">
+                <div class="p-3 mb-3 bg-light rounded border text-secondary small d-flex align-items-start gap-2">
+                    <i class="bi bi-info-circle text-primary mt-1"></i>
+                    <div>
+                        <strong>Notice:</strong> This portal handles campus maintenance and facility requests. It is not an emergency-response service; for active physical safety or medical emergencies, contact campus emergency services directly. Submitter identity is concealed in operational queues.
+                    </div>
+                </div>
                 <form method="POST" action="{{ url_for('complaints.new_complaint') }}" enctype="multipart/form-data">
                     {{ form.hidden_tag() }}
 

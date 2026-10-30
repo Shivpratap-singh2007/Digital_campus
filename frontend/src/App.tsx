@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { EmergencyBanner } from './components/EmergencyBanner';
 import { Navbar } from './components/Navbar';
 
 import { HomePage } from './pages/HomePage';
@@ -48,7 +47,6 @@ export const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <EmergencyBanner />
         <Navbar />
 
         <main className="main-container py-4">

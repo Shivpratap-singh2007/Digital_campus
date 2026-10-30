@@ -60,7 +60,7 @@ Digital_campus/
 │   ├── src/
 │   │   ├── api/client.ts      # Centralized fetch client with automatic CSRF & credentials
 │   │   ├── context/AuthContext.tsx # User session provider
-│   │   ├── components/        # Navbar, EmergencyBanner, StatusBadge
+│   │   ├── components/        # Navbar, StatusBadge, ResolutionFeedback
 │   │   └── pages/             # HomePage, QueuePage, DashboardPage, IssueDetailPage, etc.
 │   └── vite.config.ts         # Vite proxy configuration (/api -> http://127.0.0.1:5000)
 ├── uploads/                   # Secure storage for images (OUTSIDE public static folders)

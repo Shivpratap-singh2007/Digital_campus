@@ -111,11 +111,19 @@ export const NewComplaintPage: React.FC = () => {
           <div className="cv-card-header">
             <h4 className="mb-1 fw-bold text-dark">Submit Campus Report</h4>
             <p className="text-muted small mb-0">
-              Your submission will be saved securely, assigned a tracking ID, and evaluated with explainable priority rules.
+              Your submission is evaluated with deterministic safety rules. Submitter identities are concealed in operational queues and require audited justification to disclose.
             </p>
           </div>
 
           <div className="cv-card-body p-4">
+            {/* Compact Contextual Notice */}
+            <div className="p-3 mb-4 rounded border text-secondary small d-flex align-items-start gap-2" style={{ backgroundColor: 'var(--bg-subtle)', borderColor: 'var(--border-subtle)', fontSize: '0.82rem' }}>
+              <i className="bi bi-info-circle text-primary mt-0"></i>
+              <div>
+                <strong>Notice:</strong> This portal handles campus maintenance and facility issues. It is not an emergency-response service; for active physical safety or medical emergencies, contact campus emergency services directly.
+              </div>
+            </div>
+
             {error && (
               <div className="alert alert-danger py-2 small mb-4" role="alert">
                 <i className="bi bi-exclamation-triangle-fill me-1"></i>
@@ -233,7 +241,9 @@ export const NewComplaintPage: React.FC = () => {
                   maxLength={4000}
                   required
                 />
-                <div className="form-text">Minimum 10 characters. Plain factual descriptions ensure faster triage.</div>
+                <div className="form-text">
+                  Minimum 10 characters. Plain factual descriptions ensure faster triage. For active emergencies, contact campus emergency services directly.
+                </div>
               </div>
 
               {/* Photo Attachment */}

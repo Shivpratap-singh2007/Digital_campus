@@ -49,36 +49,10 @@
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
             border: 1px solid rgba(0,0,0,0.08);
         }
-        .banner-emergency {
-            background-color: #fff3cd;
-            border-bottom: 1px solid #ffe69c;
-            color: #664d03;
-            font-size: 0.88rem;
-            padding: 0.45rem 1rem;
-            text-align: center;
-        }
-        .banner-privacy {
-            background-color: #e7f1ff;
-            border-bottom: 1px solid #b6d4fe;
-            color: #084298;
-            font-size: 0.85rem;
-            padding: 0.35rem 1rem;
-            text-align: center;
-        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <!-- Emergency & Operational Notices -->
-    <div class="banner-emergency">
-        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-        <strong>Emergency Notice:</strong> This portal is <strong>not</strong> an emergency-response service. For active physical safety or medical emergencies, contact campus emergency services directly.
-    </div>
-    <div class="banner-privacy">
-        <i class="bi bi-shield-lock-fill me-1"></i>
-        <strong>Privacy Architecture:</strong> Identity-restricted reporting, not guaranteed anonymity. Submitter names/emails are concealed from ordinary operational queues and require audited justification to reveal.
-    </div>
-
     <!-- Main Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
