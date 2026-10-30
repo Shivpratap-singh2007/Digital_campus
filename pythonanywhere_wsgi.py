@@ -48,3 +48,4 @@ application = create_app()
 # Initialize database schema safely if not already created (never drops or reseeds data)
 with application.app_context():
     db.create_all()
+

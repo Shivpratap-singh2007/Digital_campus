@@ -67,3 +67,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 # Start Waitress production server (binds to 0.0.0.0 and runtime $PORT in run.py)
 CMD ["python", "run.py"]
+

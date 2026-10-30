@@ -12,3 +12,4 @@ numpy>=1.26.0
 # Optional: For Paid PythonAnywhere accounts with >=2GB disk quota & outbound internet:
 # pip install torch --index-url https://download.pytorch.org/whl/cpu
 # pip install sentence-transformers>=3.0.0
+
