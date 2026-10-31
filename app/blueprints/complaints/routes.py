@@ -13,15 +13,21 @@ from flask_login import login_required, current_user
 from app.extensions import db
 from app.blueprints.complaints import complaints_bp
 from app.models.complaint import Complaint, Attachment
-from app.models.issue import StatusEvent
+from app.models.issue import Issue, IssueComplaintLink, StatusEvent
 from app.forms import ComplaintForm, ResolutionFeedbackForm
 from app.services.image import validate_and_process_image
 from app.services.complaint_analysis import run_complaint_analysis
+from app.services.ai_pipeline import classify_issue, detect_priority, find_duplicate_issues
 
 
 @complaints_bp.route("/new", methods=["GET", "POST"])
 @login_required
 def new_complaint():
+    # Enforce role boundaries: Admins and handlers manage issues, they do not file student complaints
+    if current_user.is_handler or current_user.is_admin or current_user.role in ("admin", "handler"):
+        flash("Administrators and handlers cannot submit student complaints. Redirected to All Issues Queue.", "info")
+        return redirect(url_for("admin.queue"))
+
     frontend_dist = os.path.abspath(os.path.join(current_app.root_path, "..", "frontend", "dist"))
     if request.method == "GET" and os.path.exists(frontend_dist):
         return send_from_directory(frontend_dist, "index.html")
@@ -44,7 +50,18 @@ def new_complaint():
             flash("This report was already submitted. Redirecting to your report.", "info")
             return redirect(url_for("complaints.detail", complaint_id=existing_submission.id))
 
-        # Create Complaint record with pending analysis state
+        # Execute Core AI Pipeline before saving to database
+        full_text = f"{form.title.data.strip()}\n{form.description.data.strip()}"
+        ai_category = classify_issue(full_text)
+        ai_priority = detect_priority(full_text)
+
+        # Check for duplicate candidates against active issues (> 0.70 similarity)
+        active_issues = Issue.query.filter(
+            Issue.status.in_(["submitted", "under_review", "in_progress"])
+        ).all()
+        dup_result = find_duplicate_issues(form.title.data.strip(), form.description.data.strip(), active_issues)
+
+        # Create Complaint record with automated AI classification & priority
         complaint = Complaint(
             user_id=current_user.id,
             submission_type=form.submission_type.data,
@@ -54,11 +71,34 @@ def new_complaint():
             building=form.building.data,
             room=form.room.data.strip() if form.room.data else None,
             idempotency_token=form.idempotency_token.data,
-            analysis_state="pending",
+            suggested_category=ai_category,
+            suggested_priority=ai_priority,
+            analysis_state="completed",
             status="submitted",
         )
         db.session.add(complaint)
         db.session.flush()  # Generates complaint.id
+
+        # If duplicate candidate detected with active issue, link automatically
+        if dup_result.get("is_duplicate") and dup_result.get("matched_issue_id"):
+            matched_issue = db.session.get(Issue, dup_result["matched_issue_id"])
+            if matched_issue:
+                link = IssueComplaintLink(
+                    issue_id=matched_issue.id,
+                    complaint_id=complaint.id,
+                    relationship_type="same_incident",
+                    linked_by_user_id=current_user.id,
+                )
+                db.session.add(link)
+                complaint.status = matched_issue.status
+                db.session.add(StatusEvent(
+                    target_type="complaint",
+                    target_id=complaint.id,
+                    actor_id=current_user.id,
+                    old_status="submitted",
+                    new_status=matched_issue.status,
+                    note=f"Auto-grouped with Issue #{matched_issue.id} (TF-IDF similarity: {dup_result['similarity_score']:.2f}) by AI Pipeline.",
+                ))
 
         # Handle optional image attachment
         image_file = form.image.data
@@ -128,7 +168,7 @@ def detail(complaint_id):
     if os.path.exists(frontend_dist):
         return send_from_directory(frontend_dist, "index.html")
 
-    complaint = Complaint.query.get_or_404(complaint_id)
+    complaint = db.get_or_404(Complaint, complaint_id)
 
     # Authorization check: only owner, handler, or admin can view complaint details
     if complaint.user_id != current_user.id and not current_user.is_handler:

@@ -6,9 +6,10 @@ from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.blueprints.api import api_bp
 from app.models.complaint import Complaint, Attachment, AnalysisResult
-from app.models.issue import StatusEvent
+from app.models.issue import Issue, IssueComplaintLink, StatusEvent
 from app.services.image import validate_and_process_image
 from app.services.complaint_analysis import run_complaint_analysis
+from app.services.ai_pipeline import classify_issue, detect_priority, find_duplicate_issues
 from app.services.rate_limiter import rate_limit
 from app.services.security import sanitize_text, verified_user_required, handler_required
 
@@ -53,11 +54,18 @@ def create_complaint():
     """
     Submits a complaint or suggestion:
     - Enforces verified email status.
+    - Restricts handlers and admins from filing complaints (they manage & resolve issues).
     - Idempotency key prevents double submissions; returns existing result on repeat identical key.
     - Rejects reused key with changed content.
     - Validates inputs and optional image using Pillow.
     - Commits complaint with analysis_state='pending' before analysis.
     """
+    # Enforce role boundaries: Admins and handlers manage issues, they do not file student complaints
+    if current_user.is_handler or current_user.is_admin or current_user.role in ("admin", "handler"):
+        return jsonify({
+            "error": "Access Restricted: Administrators and handlers cannot submit student complaints. Administrative accounts are reserved for managing and resolving campus issues."
+        }), 403
+
     # Support multipart/form-data or JSON
     if request.is_json:
         payload = request.get_json() or {}
@@ -106,7 +114,18 @@ def create_complaint():
     if not building:
         return jsonify({"error": "Campus building/location is required."}), 400
 
-    # Save Complaint with analysis_state='pending'
+    # Execute Core AI Pipeline before saving to database
+    full_text = f"{title}\n{description}"
+    ai_category = classify_issue(full_text)
+    ai_priority = detect_priority(full_text)
+
+    # Check for duplicate candidates against active issues (> 0.70 similarity)
+    active_issues = Issue.query.filter(
+        Issue.status.in_(["submitted", "under_review", "in_progress"])
+    ).all()
+    dup_result = find_duplicate_issues(title, description, active_issues)
+
+    # Save Complaint with automated AI classification & priority
     complaint = Complaint(
         user_id=current_user.id,
         submission_type=submission_type,
@@ -116,11 +135,34 @@ def create_complaint():
         building=building,
         room=room,
         idempotency_token=submission_key,
-        analysis_state="pending",
+        suggested_category=ai_category,
+        suggested_priority=ai_priority,
+        analysis_state="completed",
         status="submitted",
     )
     db.session.add(complaint)
     db.session.flush()
+
+    # If duplicate candidate detected with active issue, link automatically
+    if dup_result.get("is_duplicate") and dup_result.get("matched_issue_id"):
+        matched_issue = db.session.get(Issue, dup_result["matched_issue_id"])
+        if matched_issue:
+            link = IssueComplaintLink(
+                issue_id=matched_issue.id,
+                complaint_id=complaint.id,
+                relationship_type="same_incident",
+                linked_by_user_id=current_user.id,
+            )
+            db.session.add(link)
+            complaint.status = matched_issue.status
+            db.session.add(StatusEvent(
+                target_type="complaint",
+                target_id=complaint.id,
+                actor_id=current_user.id,
+                old_status="submitted",
+                new_status=matched_issue.status,
+                note=f"Auto-grouped with Issue #{matched_issue.id} (TF-IDF similarity: {dup_result['similarity_score']:.2f}) by AI Pipeline.",
+            ))
 
     # Process image if provided
     if image_file and image_file.filename:
@@ -158,6 +200,15 @@ def create_complaint():
         "title": complaint.title,
         "status": complaint.status,
         "analysis_state": complaint.analysis_state,
+        "suggested_category": complaint.suggested_category,
+        "suggested_priority": complaint.suggested_priority,
+        "ai_pipeline": {
+            "category": ai_category,
+            "priority": ai_priority,
+            "is_duplicate": dup_result.get("is_duplicate", False),
+            "matched_issue_id": dup_result.get("matched_issue_id"),
+            "similarity_score": dup_result.get("similarity_score", 0.0),
+        },
         "message": f"{complaint.submission_type.capitalize()} submitted successfully.",
     }), 201
 
@@ -166,7 +217,7 @@ def create_complaint():
 @login_required
 def trigger_analysis(complaint_id):
     """Executes AI and rule analysis on a saved complaint."""
-    complaint = Complaint.query.get_or_404(complaint_id)
+    complaint = db.get_or_404(Complaint, complaint_id)
     if complaint.user_id != current_user.id and not current_user.is_handler:
         abort(403)
 
@@ -183,7 +234,7 @@ def trigger_analysis(complaint_id):
 @login_required
 def get_complaint(complaint_id):
     """Retrieves full details for a complaint with status events and analysis metadata."""
-    complaint = Complaint.query.get_or_404(complaint_id)
+    complaint = db.get_or_404(Complaint, complaint_id)
     if complaint.user_id != current_user.id and not current_user.is_handler:
         abort(403)
 
@@ -302,7 +353,7 @@ def serve_attachment(filename):
 @handler_required
 def retry_analysis(complaint_id):
     """Handler action to re-run AI and rule analysis."""
-    complaint = Complaint.query.get_or_404(complaint_id)
+    complaint = db.get_or_404(Complaint, complaint_id)
     success = run_complaint_analysis(complaint)
     return jsonify({
         "success": success,

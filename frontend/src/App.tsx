@@ -1,8 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ViewModeProvider, useViewMode } from './context/ViewModeContext';
 import { Navbar } from './components/Navbar';
 import { BottomNav } from './components/BottomNav';
+import { ComplaintSubmissionModal } from './components/ComplaintSubmissionModal';
 
 import { HomePage } from './pages/HomePage';
 import { PublicIssuesPage } from './pages/PublicIssuesPage';
@@ -47,6 +49,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requireHandler?: boo
 
 const AppShell: React.FC = () => {
   const { user } = useAuth();
+  const { isSubmitModalOpen, closeSubmitModal } = useViewMode();
   const location = useLocation();
 
   const isAuthScreen = ['/login', '/register', '/verify-email'].includes(location.pathname);
@@ -112,7 +115,11 @@ const AppShell: React.FC = () => {
               path="/new-complaint"
               element={
                 <ProtectedRoute>
-                  <NewComplaintPage />
+                  {user && (user.is_handler || user.is_admin || user.role === 'admin' || user.role === 'handler') ? (
+                    <Navigate to="/admin/queue" replace />
+                  ) : (
+                    <NewComplaintPage />
+                  )}
                 </ProtectedRoute>
               }
             />
@@ -185,6 +192,17 @@ const AppShell: React.FC = () => {
       </footer>
 
       {showBottomNav && <BottomNav />}
+
+      {/* Global Interactive Complaint Submission Modal - Students Only */}
+      {!(user && (user.is_handler || user.is_admin || user.role === 'admin' || user.role === 'handler')) && (
+        <ComplaintSubmissionModal
+          isOpen={isSubmitModalOpen}
+          onClose={closeSubmitModal}
+          onSuccess={() => {
+            // Trigger reload or notification
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -192,9 +210,11 @@ const AppShell: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppShell />
-      </BrowserRouter>
+      <ViewModeProvider>
+        <BrowserRouter>
+          <AppShell />
+        </BrowserRouter>
+      </ViewModeProvider>
     </AuthProvider>
   );
 };

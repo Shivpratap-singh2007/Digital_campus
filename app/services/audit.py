@@ -25,7 +25,7 @@ def reveal_complaint_submitter(
     if not justification or len(justification.strip()) < 10:
         return False, "A specific operational justification (minimum 10 characters) is required.", None
 
-    complaint = Complaint.query.get(complaint_id)
+    complaint = db.session.get(Complaint, complaint_id)
     if not complaint:
         return False, "Complaint not found.", None
 

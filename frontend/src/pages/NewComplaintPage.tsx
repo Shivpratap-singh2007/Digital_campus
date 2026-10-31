@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { analyzeComplaintText } from '../utils/realtimeNlp';
+import { generateAiDraftDescription } from '../utils/aiDraftGenerator';
 
 const CAMPUS_LOCATIONS = [
   'Academic Block A',
@@ -34,6 +36,16 @@ export const NewComplaintPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const isAdministrativeRole = Boolean(
+    user && (user.is_handler || user.is_admin || user.role === 'admin' || user.role === 'handler')
+  );
+
+  useEffect(() => {
+    if (isAdministrativeRole) {
+      navigate('/admin/queue', { replace: true });
+    }
+  }, [isAdministrativeRole, navigate]);
+
   const [submissionKey, setSubmissionKey] = useState('');
   const [submissionType, setSubmissionType] = useState('complaint');
   const [title, setTitle] = useState('');
@@ -46,6 +58,25 @@ export const NewComplaintPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [analyzingStatus, setAnalyzingStatus] = useState<string | null>(null);
+  const [isDrafting, setIsDrafting] = useState(false);
+  const [draftSuccessNotice, setDraftSuccessNotice] = useState(false);
+
+  const handleAutoDraft = () => {
+    if (!title.trim()) {
+      setError('Please enter an issue title first.');
+      return;
+    }
+    setError('');
+    setIsDrafting(true);
+
+    setTimeout(() => {
+      const generatedDraft = generateAiDraftDescription(title, building, room);
+      setDescription(generatedDraft);
+      setIsDrafting(false);
+      setDraftSuccessNotice(true);
+      setTimeout(() => setDraftSuccessNotice(false), 3000);
+    }, 350);
+  };
 
   useEffect(() => {
     setSubmissionKey(crypto.randomUUID());
@@ -55,6 +86,11 @@ export const NewComplaintPage: React.FC = () => {
     e.preventDefault();
     if (loading) return; // Prevent duplicate concurrent submissions
     setError('');
+
+    if (isAdministrativeRole) {
+      setError('Administrators and handlers cannot submit student complaints.');
+      return;
+    }
 
     if (!user?.is_verified && user?.role === 'user') {
       setError('You must verify your college email address before submitting reports.');
@@ -97,6 +133,24 @@ export const NewComplaintPage: React.FC = () => {
       setAnalyzingStatus(null);
     }
   };
+
+  const nlp = analyzeComplaintText(title, description);
+
+  if (isAdministrativeRole) {
+    return (
+      <div className="container py-5">
+        <div className="alert alert-info py-4 text-center">
+          <h5><i className="bi bi-shield-lock me-2"></i>Admin / Handler Mode Active</h5>
+          <p className="mb-3 text-secondary">
+            Administrators and operational handlers resolve campus issues and cannot submit student complaints.
+          </p>
+          <Link to="/admin/queue" className="btn btn-primary">
+            Go to All Issues Queue
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="row justify-content-center">
@@ -229,9 +283,42 @@ export const NewComplaintPage: React.FC = () => {
 
               {/* Description */}
               <div className="mb-3">
-                <label className="form-label">
-                  Detailed Description <span className="text-danger">*</span>
-                </label>
+                <div className="d-flex justify-content-between align-items-center mb-1">
+                  <label className="form-label mb-0">
+                    Detailed Description <span className="text-danger">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-sm py-0 px-2 d-inline-flex align-items-center gap-1 border-0"
+                    onClick={handleAutoDraft}
+                    disabled={loading || isDrafting}
+                    style={{
+                      backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                      color: '#4f46e5',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      borderRadius: '20px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title="Generate intelligent factual description from title & location"
+                  >
+                    {isDrafting ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm"
+                          role="status"
+                          style={{ width: '0.75rem', height: '0.75rem' }}
+                        ></span>
+                        <span>Drafting with AI...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>✨ Auto-Draft with AI</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <textarea
                   className="form-control"
                   rows={5}
@@ -242,10 +329,91 @@ export const NewComplaintPage: React.FC = () => {
                   maxLength={4000}
                   required
                 />
+                {draftSuccessNotice && (
+                  <div
+                    className="text-success small mt-1 d-flex align-items-center gap-1"
+                    style={{ fontSize: '0.75rem' }}
+                  >
+                    <i className="bi bi-stars text-primary"></i> Description auto-drafted! Fully editable to refine details.
+                  </div>
+                )}
                 <div className="form-text">
                   Minimum 10 characters. Plain factual descriptions ensure faster triage. For active emergencies, contact campus emergency services directly.
                 </div>
               </div>
+
+              {/* Real-time NLP Intelligence Assistant */}
+              {(title.trim() || description.trim()) && (
+                <div
+                  className="p-3 rounded border mb-4"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderColor: nlp.priorityLevel === 'P1' ? '#fecaca' : '#e2e8f0',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+                  }}
+                >
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <div className="d-flex align-items-center gap-1">
+                      <i className="bi bi-cpu-fill text-primary"></i>
+                      <span className="small fw-bold text-dark" style={{ letterSpacing: '0.02em' }}>
+                        Real-Time NLP Intelligence
+                      </span>
+                    </div>
+                    <span className="text-muted small" style={{ fontSize: '0.72rem' }}>
+                      Auto-Triage Active
+                    </span>
+                  </div>
+
+                  <div className="row g-2 align-items-center">
+                    <div className="col-sm-6">
+                      <div className="d-flex align-items-center gap-2 p-2 rounded bg-light">
+                        <i className={`bi ${nlp.categoryIcon}`} style={{ color: nlp.categoryColor, fontSize: '1.1rem' }}></i>
+                        <div>
+                          <div className="text-muted small" style={{ fontSize: '0.7rem' }}>
+                            Auto-Categorization
+                          </div>
+                          <div className="fw-semibold text-dark small">{nlp.category}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="col-sm-6">
+                      <div
+                        className="d-flex align-items-center gap-2 p-2 rounded"
+                        style={{ backgroundColor: nlp.priorityBg }}
+                      >
+                        <i
+                          className={`bi ${
+                            nlp.priorityLevel === 'P1'
+                              ? 'bi-exclamation-octagon-fill'
+                              : nlp.priorityLevel === 'P2'
+                              ? 'bi-exclamation-triangle-fill'
+                              : 'bi-check-circle-fill'
+                          }`}
+                          style={{ color: nlp.priorityColor, fontSize: '1.1rem' }}
+                        ></i>
+                        <div>
+                          <div className="text-muted small" style={{ fontSize: '0.7rem' }}>
+                            Urgency Priority
+                          </div>
+                          <div className="fw-bold small" style={{ color: nlp.priorityColor }}>
+                            {nlp.priority}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {nlp.duplicateHint && (
+                    <div className="mt-2 p-2 rounded bg-primary-subtle border border-primary-subtle d-flex align-items-center gap-2">
+                      <i className="bi bi-info-circle-fill text-primary flex-shrink-0"></i>
+                      <span className="small text-primary fw-medium" style={{ fontSize: '0.8rem' }}>
+                        {nlp.duplicateHint}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Photo Attachment */}
               <div className="mb-4">

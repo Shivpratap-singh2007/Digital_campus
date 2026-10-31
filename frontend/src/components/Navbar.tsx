@@ -44,118 +44,122 @@ export const Navbar: React.FC = () => {
 
             {user && (
               <>
-                <li className="nav-item">
-                  <Link
-                    className={`nav-link ${isActive('/my-complaints') ? 'active' : ''}`}
-                    to="/my-complaints"
-                  >
-                    My Submissions
-                  </Link>
-                </li>
-
-                {user.is_handler && (
-                  <li className="nav-item dropdown ms-lg-2">
-                    <a
-                      className="nav-link dropdown-toggle text-dark fw-semibold"
-                      href="#"
-                      id="handlerDropdown"
-                      role="button"
-                      data-bs-toggle="dropdown"
+                {user.is_handler ? (
+                  <>
+                    <li className="nav-item">
+                      <Link
+                        className={`nav-link ${isActive('/admin/queue') ? 'active' : ''}`}
+                        to="/admin/queue"
+                      >
+                        All Issues Queue
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link
+                        className={`nav-link ${isActive('/admin/dashboard') ? 'active' : ''}`}
+                        to="/admin/dashboard"
+                      >
+                        Analytics
+                      </Link>
+                    </li>
+                    {user.is_admin && (
+                      <li className="nav-item">
+                        <Link
+                          className={`nav-link ${isActive('/admin/audit-log') ? 'active' : ''}`}
+                          to="/admin/audit-log"
+                        >
+                          Audit Log
+                        </Link>
+                      </li>
+                    )}
+                  </>
+                ) : (
+                  <li className="nav-item">
+                    <Link
+                      className={`nav-link ${isActive('/my-complaints') ? 'active' : ''}`}
+                      to="/my-complaints"
                     >
-                      Operations ({user.is_admin ? 'Admin' : 'Handler'})
-                    </a>
-                    <ul className="dropdown-menu shadow-sm border" style={{ borderColor: 'var(--border-subtle)' }}>
-                      <li>
-                        <Link className="dropdown-item py-2" to="/admin/queue">
-                          <i className="bi bi-list-task me-2 text-secondary"></i>Complaint Queue
-                        </Link>
-                      </li>
-                      <li>
-                        <Link className="dropdown-item py-2" to="/admin/create-issue">
-                          <i className="bi bi-folder-plus me-2 text-secondary"></i>Create Master Issue
-                        </Link>
-                      </li>
-                      <li>
-                        <Link className="dropdown-item py-2" to="/admin/dashboard">
-                          <i className="bi bi-graph-up me-2 text-secondary"></i>Metrics Dashboard
-                        </Link>
-                      </li>
-                      {user.is_admin && (
-                        <>
-                          <li><hr className="dropdown-divider" /></li>
-                          <li>
-                            <Link className="dropdown-item py-2" to="/admin/audit-log">
-                              <i className="bi bi-journal-text me-2 text-secondary"></i>Restricted Audit Log
-                            </Link>
-                          </li>
-                        </>
-                      )}
-                    </ul>
+                      My Submissions
+                    </Link>
                   </li>
                 )}
               </>
             )}
           </ul>
 
-          <ul className="navbar-nav ms-auto align-items-lg-center gap-2">
+          <ul className="navbar-nav ms-auto align-items-lg-center">
             {user ? (
-              <>
-                <li className="nav-item">
-                  <Link className="btn btn-nav-primary d-inline-flex align-items-center gap-1" to="/new-complaint">
-                    <i className="bi bi-plus-lg"></i>
-                    <span>Submit Report</span>
-                  </Link>
-                </li>
-
-                <li className="nav-item dropdown ms-lg-2">
-                  <button
-                    className="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
-                    type="button"
-                    data-bs-toggle="dropdown"
-                    style={{ borderColor: 'var(--border-strong)' }}
-                  >
-                    <i className="bi bi-person-circle text-secondary"></i>
-                    <span className="fw-medium text-dark">{user.full_name}</span>
-                    {user.is_verified ? (
-                      <span className="cv-badge cv-badge-normal" style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
-                        Verified
-                      </span>
-                    ) : (
-                      <span className="cv-badge cv-badge-review" style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
-                        Unverified
-                      </span>
-                    )}
-                  </button>
-                  <ul className="dropdown-menu dropdown-menu-end shadow-sm border" style={{ borderColor: 'var(--border-subtle)' }}>
-                    <li className="dropdown-header text-muted small">
-                      {user.email} &bull; <span className="text-capitalize">{user.role}</span>
+              <li className="nav-item dropdown">
+                <button
+                  className="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  style={{ borderColor: 'var(--border-strong)', backgroundColor: 'var(--bg-surface)' }}
+                >
+                  <i className="bi bi-person-circle text-secondary"></i>
+                  <span className="fw-medium text-dark">{user.full_name}</span>
+                  {user.is_admin ? (
+                    <span className="badge bg-danger-subtle text-danger border border-danger-subtle" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                      <i className="bi bi-shield-lock-fill me-1"></i>Admin
+                    </span>
+                  ) : user.is_handler ? (
+                    <span className="badge bg-info-subtle text-primary border border-info-subtle" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                      Handler
+                    </span>
+                  ) : user.is_verified ? (
+                    <span className="cv-badge cv-badge-normal" style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
+                      Verified
+                    </span>
+                  ) : (
+                    <span className="cv-badge cv-badge-review" style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem' }}>
+                      Unverified
+                    </span>
+                  )}
+                </button>
+                <ul className="dropdown-menu dropdown-menu-end shadow-sm border" style={{ borderColor: 'var(--border-subtle)' }}>
+                  <li className="dropdown-header text-muted small">
+                    {user.email} &bull; <span className="text-capitalize">{user.role}</span>
+                  </li>
+                  {!user.is_verified && (
+                    <li>
+                      <Link className="dropdown-item text-warning" to="/verify-email">
+                        <i className="bi bi-envelope-exclamation me-2"></i>Verify College Email
+                      </Link>
                     </li>
-                    {!user.is_verified && (
+                  )}
+                  {user.is_handler ? (
+                    <>
                       <li>
-                        <Link className="dropdown-item text-warning" to="/verify-email">
-                          <i className="bi bi-envelope-exclamation me-2"></i>Verify College Email
+                        <Link className="dropdown-item py-2" to="/admin/queue">
+                          <i className="bi bi-list-task me-2 text-secondary"></i>All Issues Queue
                         </Link>
                       </li>
-                    )}
+                      <li>
+                        <Link className="dropdown-item py-2" to="/admin/dashboard">
+                          <i className="bi bi-graph-up me-2 text-secondary"></i>Operations Analytics
+                        </Link>
+                      </li>
+                    </>
+                  ) : (
                     <li>
                       <Link className="dropdown-item py-2" to="/my-complaints">
                         <i className="bi bi-collection me-2 text-secondary"></i>My Complaints
                       </Link>
                     </li>
-                    <li>
-                      <Link className="dropdown-item py-2" to="/settings">
-                        <i className="bi bi-gear me-2 text-secondary"></i>Account Settings
-                      </Link>
-                    </li>
-                    <li><hr className="dropdown-divider" /></li>
-                    <li>
-                      <button className="dropdown-item text-danger py-2" onClick={handleLogout}>
-                        <i className="bi bi-box-arrow-right me-2"></i>Log Out
-                      </button>
-                    </li>
-                  </ul>
-                </li>
-              </>
+                  )}
+                  <li>
+                    <Link className="dropdown-item py-2" to="/settings">
+                      <i className="bi bi-gear me-2 text-secondary"></i>Account Settings
+                    </Link>
+                  </li>
+                  <li><hr className="dropdown-divider" /></li>
+                  <li>
+                    <button className="dropdown-item text-danger py-2" onClick={handleLogout}>
+                      <i className="bi bi-box-arrow-right me-2"></i>Log Out
+                    </button>
+                  </li>
+                </ul>
+              </li>
             ) : (
               <>
                 <li className="nav-item">
@@ -164,7 +168,7 @@ export const Navbar: React.FC = () => {
                   </Link>
                 </li>
                 <li className="nav-item">
-                  <Link className="btn btn-nav-primary" to="/register">
+                  <Link className="btn btn-outline-secondary btn-sm" to="/register">
                     Register
                   </Link>
                 </li>

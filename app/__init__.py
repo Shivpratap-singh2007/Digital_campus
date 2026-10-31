@@ -21,7 +21,7 @@ def create_app(config_class=Config):
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
 
     @login_manager.unauthorized_handler
     def unauthorized_callback():
@@ -48,12 +48,25 @@ def create_app(config_class=Config):
     app.register_blueprint(admin_bp)
     app.register_blueprint(cli_bp)
 
+    # Safe schema auto-initialization for production & ephemeral deployments
+    with app.app_context():
+        try:
+            db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+            if db_uri.startswith("sqlite:///"):
+                sqlite_file = db_uri.replace("sqlite:///", "")
+                if sqlite_file and not sqlite_file.startswith(":memory:"):
+                    db_dir = os.path.dirname(os.path.abspath(sqlite_file))
+                    if db_dir:
+                        os.makedirs(db_dir, exist_ok=True)
+            db.create_all()
+        except Exception as e:
+            app.logger.warning(f"Database schema initialization notice: {e}")
+
     # Safe auto-initialization for fresh ephemeral deployments when explicitly enabled
     bootstrap_enabled = os.environ.get("BOOTSTRAP_DEMO_DATA", "").lower() in ("true", "1", "yes") or \
                         os.environ.get("DEMO_MODE", "").lower() in ("true", "1", "yes")
     if bootstrap_enabled:
         with app.app_context():
-            db.create_all()
             from app.services.fixtures import provision_synthetic_fixtures
             provision_synthetic_fixtures(app)
 

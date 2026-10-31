@@ -8,6 +8,7 @@ email-validator>=2.1.0
 pillow>=10.2.0
 python-dotenv>=1.0.1
 numpy>=1.26.0
+scikit-learn>=1.3.0
 
 # Optional: For Paid PythonAnywhere accounts with >=2GB disk quota & outbound internet:
 # pip install torch --index-url https://download.pytorch.org/whl/cpu

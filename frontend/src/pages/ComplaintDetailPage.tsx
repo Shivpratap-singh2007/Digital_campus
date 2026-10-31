@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
+import { ResolutionVerificationCard } from '../components/ResolutionVerificationCard';
 
 export const ComplaintDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -12,21 +13,10 @@ export const ComplaintDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Feedback form state
-  const [feedbackResponse, setFeedbackResponse] = useState<'fixed' | 'partially_fixed' | 'not_fixed'>('fixed');
-  const [feedbackComments, setFeedbackComments] = useState('');
-  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState('');
-  const [feedbackError, setFeedbackError] = useState('');
-
   const loadData = async () => {
     try {
       const data = await api.get(`/api/complaints/${id}`);
       setComplaint(data);
-      if (data.linked_issue?.user_feedback) {
-        setFeedbackResponse(data.linked_issue.user_feedback.response);
-        setFeedbackComments(data.linked_issue.user_feedback.comments || '');
-      }
     } catch (err: any) {
       setError(err.message || 'Failed to load complaint details.');
     } finally {
@@ -37,28 +27,6 @@ export const ComplaintDetailPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [id]);
-
-  const handleFeedbackSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!complaint?.linked_issue?.id) return;
-
-    setFeedbackSubmitting(true);
-    setFeedbackMessage('');
-    setFeedbackError('');
-
-    try {
-      const res = await api.post(`/api/feedback/issue/${complaint.linked_issue.id}`, {
-        response: feedbackResponse,
-        comments: feedbackComments,
-      });
-      setFeedbackMessage(res.message || 'Feedback recorded successfully.');
-      await loadData();
-    } catch (err: any) {
-      setFeedbackError(err.message || 'Failed to submit feedback.');
-    } finally {
-      setFeedbackSubmitting(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -86,7 +54,9 @@ export const ComplaintDetailPage: React.FC = () => {
   }
 
   const linkedIssue = complaint.linked_issue;
-  const isResolved = linkedIssue && linkedIssue.status === 'resolved';
+  const isResolved =
+    complaint.status === 'resolved' ||
+    Boolean(linkedIssue && (linkedIssue.status === 'resolved' || linkedIssue.current_round));
 
   return (
     <div>
@@ -168,104 +138,20 @@ export const ComplaintDetailPage: React.FC = () => {
 
               {/* Verified Resolution Feedback Section */}
               {isResolved && (
-                <div id="feedback" className="cv-card border-success mt-4">
-                  <div className="cv-card-header bg-white border-bottom border-success-subtle py-3">
-                    <div className="d-flex align-items-center gap-2">
-                      <i className="bi bi-patch-check text-success fs-5"></i>
-                      <div>
-                        <h5 className="mb-0 fw-bold text-dark">Verified Resolution Feedback</h5>
-                        <p className="text-muted small mb-0">
-                          Campus operations marked this issue as resolved. As the original submitter, please verify the physical fix.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="cv-card-body p-4">
-                    {feedbackMessage && <div className="alert alert-success py-2 small mb-3">{feedbackMessage}</div>}
-                    {feedbackError && <div className="alert alert-danger py-2 small mb-3">{feedbackError}</div>}
-
-                    {linkedIssue?.user_feedback && (
-                      <div className="p-3 rounded mb-3" style={{ backgroundColor: 'var(--bg-subtle)' }}>
-                        <div className="d-flex justify-content-between align-items-center mb-1">
-                          <span className="fw-semibold text-dark small">Your Recorded Rating:</span>
-                          <StatusBadge type="feedback_response" value={linkedIssue.user_feedback.response} />
-                        </div>
-                        {linkedIssue.user_feedback.comments && (
-                          <div className="small text-muted fst-italic mt-1">
-                            "{linkedIssue.user_feedback.comments}"
-                          </div>
-                        )}
-                        <div className="small text-muted mt-1" style={{ fontSize: '0.75rem' }}>
-                          Recorded on {new Date(linkedIssue.user_feedback.created_at).toLocaleString()}
-                        </div>
-                      </div>
-                    )}
-
-                    <form onSubmit={handleFeedbackSubmit}>
-                      <div className="mb-3">
-                        <label className="form-label mb-2">Has the issue been resolved to your satisfaction?</label>
-                        <div className="d-flex flex-column gap-2">
-                          <label className="d-flex align-items-center gap-2 p-2 rounded border" style={{ cursor: 'pointer' }}>
-                            <input
-                              type="radio"
-                              name="response"
-                              value="fixed"
-                              checked={feedbackResponse === 'fixed'}
-                              onChange={() => setFeedbackResponse('fixed')}
-                            />
-                            <div>
-                              <strong className="text-success">Fixed</strong>
-                              <span className="text-secondary small ms-2">— Problem has been fully resolved.</span>
-                            </div>
-                          </label>
-
-                          <label className="d-flex align-items-center gap-2 p-2 rounded border" style={{ cursor: 'pointer' }}>
-                            <input
-                              type="radio"
-                              name="response"
-                              value="partially_fixed"
-                              checked={feedbackResponse === 'partially_fixed'}
-                              onChange={() => setFeedbackResponse('partially_fixed')}
-                            />
-                            <div>
-                              <strong className="text-warning text-dark">Partially fixed</strong>
-                              <span className="text-secondary small ms-2">— Work was done, but minor issues remain.</span>
-                            </div>
-                          </label>
-
-                          <label className="d-flex align-items-center gap-2 p-2 rounded border" style={{ cursor: 'pointer' }}>
-                            <input
-                              type="radio"
-                              name="response"
-                              value="not_fixed"
-                              checked={feedbackResponse === 'not_fixed'}
-                              onChange={() => setFeedbackResponse('not_fixed')}
-                            />
-                            <div>
-                              <strong className="text-danger">Not fixed</strong>
-                              <span className="text-secondary small ms-2">— Physical malfunction still persists.</span>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="form-label">Submitter Observations (Optional)</label>
-                        <textarea
-                          className="form-control"
-                          rows={2}
-                          placeholder="Provide specific notes regarding current state..."
-                          value={feedbackComments}
-                          onChange={(e) => setFeedbackComments(e.target.value)}
-                        />
-                      </div>
-
-                      <button type="submit" className="btn btn-primary" disabled={feedbackSubmitting}>
-                        {feedbackSubmitting ? 'Recording Rating...' : 'Submit Verified Confirmation'}
-                      </button>
-                    </form>
-                  </div>
+                <div id="feedback" className="mt-4">
+                  <ResolutionVerificationCard
+                    complaintId={complaint.id}
+                    issueId={linkedIssue?.id}
+                    initialOption={linkedIssue?.user_feedback?.response || 'fixed'}
+                    initialObservations={linkedIssue?.user_feedback?.comments}
+                    onSuccess={async (res) => {
+                      setComplaint((prev: any) => ({
+                        ...prev,
+                        status: res.ticketStatus,
+                      }));
+                      await loadData();
+                    }}
+                  />
                 </div>
               )}
             </div>

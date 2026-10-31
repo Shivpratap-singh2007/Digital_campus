@@ -98,3 +98,45 @@ def test_login_and_logout(client, verified_user):
     me_after = client.get("/api/auth/me")
     assert me_after.get_json()["authenticated"] is False
 
+
+def test_provision_synthetic_fixtures_and_baseline_data(app):
+    """Test R9: synthetic demo fixture provisioning covers accounts, categories, suggestions, grouping, and feedback."""
+    from app.services.fixtures import provision_synthetic_fixtures
+    from app.models.issue import Issue, IssueComplaintLink
+    from app.models.complaint import Complaint
+    from app.models.feedback import ResolutionRound
+
+    res = provision_synthetic_fixtures(
+        app=app,
+        admin_password="AdminSecure123!",
+        handler_password="HandlerSecure123!",
+        student_password="StudentSecure123!",
+    )
+    assert len(res["created"]) >= 4
+
+    # Check complaints across categories
+    categories = set(c.user_category for c in Complaint.query.all())
+    assert "Infrastructure" in categories
+    assert "Sanitation" in categories
+    assert "Academics" in categories
+    assert "Student services" in categories
+    assert "IT / connectivity" in categories
+
+    # Check suggestion exists
+    suggestion = Complaint.query.filter_by(submission_type="suggestion").first()
+    assert suggestion is not None
+
+    # Check issues with grouping
+    issues = Issue.query.all()
+    assert len(issues) >= 3
+
+    # Check resolved issue and round
+    resolved = Issue.query.filter_by(status="resolved").first()
+    assert resolved is not None
+    assert resolved.current_resolution_round is not None
+    assert resolved.current_resolution_round.status == "submitter_confirmed"
+
+    # Check disputed round
+    disputed = ResolutionRound.query.filter_by(status="disputed").first()
+    assert disputed is not None
+

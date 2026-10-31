@@ -79,7 +79,7 @@ def run_complaint_analysis(complaint: Complaint) -> bool:
         db.session.rollback()
         try:
             # Preserve complaint and mark as needs_review
-            comp = Complaint.query.get(complaint.id)
+            comp = db.session.get(Complaint, complaint.id)
             if comp:
                 comp.analysis_state = "needs_review"
                 db.session.commit()

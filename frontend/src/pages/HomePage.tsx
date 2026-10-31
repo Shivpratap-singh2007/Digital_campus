@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useViewMode } from '../context/ViewModeContext';
 import { StatusBadge } from '../components/StatusBadge';
+import { AdminResolutionDashboard } from '../components/AdminResolutionDashboard';
 
 export const HomePage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { openSubmitModal } = useViewMode();
   const [issues, setIssues] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total_submissions: 0,
@@ -36,31 +39,70 @@ export const HomePage: React.FC = () => {
     loadData();
   }, []);
 
+  // Role strictly fixed based on authenticated user profile:
+  // Handlers and Admins automatically see the Admin Resolution Dashboard;
+  // Students and guests see the Student Issue Tracker Portal.
+  const isAdminView = Boolean(user && (user.is_handler || user.is_admin || user.role === 'admin' || user.role === 'handler'));
+
+  if (authLoading) {
+    return (
+      <div className="py-5 text-center text-muted">
+        <div className="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+        <span>Loading workspace...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="py-2">
-      {/* Editorial Minimalist Hero Header */}
-      <div className="row align-items-center py-4 mb-5">
-        <div className="col-lg-8">
-          <div className="d-inline-flex align-items-center gap-2 cv-badge cv-badge-low mb-3">
-            <span className="text-secondary fw-semibold">Campus Issue Tracker</span>
-          </div>
-          <h1 className="display-6 fw-bold text-dark mb-3" style={{ letterSpacing: '-0.03em' }}>
-            Report. Track. Resolve.
-          </h1>
-          <p className="lead text-secondary mb-4" style={{ fontSize: '1.05rem', maxWidth: '640px' }}>
-            Report campus issues and track their progress.
-          </p>
+      {isAdminView ? (
+        <AdminResolutionDashboard />
+      ) : (
+        <>
+          {/* Editorial Minimalist Hero Header */}
+          <div className="row align-items-center pt-2 pb-4 mb-5">
+            <div className="col-lg-8">
+              <h1
+                className="text-dark mb-3"
+                style={{
+                  fontSize: 'clamp(2.75rem, 5vw, 3.85rem)',
+                  fontWeight: 800,
+                  lineHeight: 1.12,
+                  letterSpacing: '-0.04em',
+                }}
+              >
+                Report Track Resolve
+              </h1>
+              <p
+                className="mb-4"
+                style={{
+                  fontSize: '1.3rem',
+                  fontWeight: 500,
+                  color: '#475569',
+                  lineHeight: 1.5,
+                  maxWidth: '640px',
+                }}
+              >
+                Report campus issues and track their progress.
+              </p>
 
-          <div className="d-flex flex-wrap gap-2">
-            <Link to="/new-complaint" className="btn btn-primary d-inline-flex align-items-center gap-2">
-              <i className="bi bi-plus-lg"></i>
-              <span>Submit Report</span>
-            </Link>
-            <Link to={user ? "/my-complaints" : "/login"} className="btn btn-outline-secondary">
-              My Reports
-            </Link>
-          </div>
-        </div>
+              <div className="d-flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-lg px-4 py-2 d-inline-flex align-items-center gap-2 fs-6 fw-semibold shadow-sm"
+                  onClick={openSubmitModal}
+                >
+                  <i className="bi bi-plus-lg"></i>
+                  <span>Submit Report</span>
+                </button>
+                <Link
+                  to={user ? "/my-complaints" : "/login"}
+                  className="btn btn-outline-secondary btn-lg px-4 py-2 fs-6 fw-medium"
+                >
+                  My Reports
+                </Link>
+              </div>
+            </div>
 
         {/* Overview Metrics Widget */}
         <div className="col-lg-4 mt-4 mt-lg-0">
@@ -196,6 +238,8 @@ export const HomePage: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
-  );
+    </>
+    )}
+  </div>
+);
 };

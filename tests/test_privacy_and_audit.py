@@ -93,3 +93,70 @@ def test_audited_identity_reveal_lifecycle(client, admin_user, handler_user, ver
     # Privacy rule: Disclosed personal data is NOT redundantly copied into the audit log
     assert verified_user.email not in audit_ev.justification
 
+
+def test_admin_dashboard_metrics_breakdowns_and_recurring(client, handler_user, verified_user, app):
+    """Test R6 Admin Dashboard: category, priority, 14-day trend, recurring issues."""
+    from app.models.issue import Issue, IssueComplaintLink
+
+    c1 = Complaint(
+        user_id=verified_user.id,
+        submission_type="complaint",
+        title="Dashboard Test 1",
+        description="Hazardous sparking wire",
+        user_category="Infrastructure",
+        suggested_priority="Urgent review",
+        building="Academic Block A",
+        idempotency_token="dash-1",
+        status="under_review",
+    )
+    c2 = Complaint(
+        user_id=verified_user.id,
+        submission_type="complaint",
+        title="Dashboard Test 2",
+        description="Another broken socket",
+        user_category="Infrastructure",
+        suggested_priority="Urgent review",
+        building="Academic Block A",
+        idempotency_token="dash-2",
+        status="under_review",
+    )
+    db.session.add_all([c1, c2])
+    db.session.commit()
+
+    issue = Issue(
+        title="Recurring Electrical Issue",
+        description="Aggregated electrical repairs",
+        category="Infrastructure",
+        building="Academic Block A",
+        status="under_review",
+        priority="Urgent review",
+        created_by_user_id=handler_user.id,
+    )
+    db.session.add(issue)
+    db.session.flush()
+
+    db.session.add(IssueComplaintLink(issue_id=issue.id, complaint_id=c1.id, linked_by_user_id=handler_user.id))
+    db.session.add(IssueComplaintLink(issue_id=issue.id, complaint_id=c2.id, linked_by_user_id=handler_user.id))
+    db.session.commit()
+
+    # Login as handler
+    client.post(
+        "/api/auth/login",
+        json={"email": handler_user.email, "password": "HandlerPass123!"},
+    )
+
+    res = client.get("/api/admin/dashboard")
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "metrics" in data
+    assert "category_breakdown" in data
+    assert "priority_breakdown" in data
+    assert "submission_trend" in data
+    assert len(data["submission_trend"]) == 14
+    assert "multi_report_issues" in data
+    assert "recurring_issues" in data
+    assert len(data["multi_report_issues"]) >= 1
+    rec = data["multi_report_issues"][0]
+    assert rec["id"] == issue.id
+    assert rec["report_count"] == 2
+

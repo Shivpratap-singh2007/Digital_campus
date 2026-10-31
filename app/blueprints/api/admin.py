@@ -1,10 +1,11 @@
+from datetime import datetime, timezone, timedelta
 from flask import jsonify, request, abort, current_app
 from flask_login import login_required, current_user
 from sqlalchemy import func
 from app.extensions import db
 from app.blueprints.api import api_bp
 from app.models.complaint import Complaint
-from app.models.issue import Issue
+from app.models.issue import Issue, IssueComplaintLink
 from app.models.feedback import ResolutionRound
 from app.models.audit import AuditEvent
 from app.services.audit import reveal_complaint_submitter
@@ -120,7 +121,7 @@ def admin_reveal_identity(complaint_id):
 @handler_required
 def set_final_attributes(complaint_id):
     """Handler action to assign final category and priority."""
-    complaint = Complaint.query.get_or_404(complaint_id)
+    complaint = db.get_or_404(Complaint, complaint_id)
     data = request.get_json() or {}
 
     final_cat = sanitize_text(data.get("final_category") or "")
@@ -184,6 +185,77 @@ def admin_dashboard():
     )
     location_data = [{"location": l[0], "count": l[1]} for l in loc_counts]
 
+    # Priority breakdown (R6: Priority levels)
+    priority_expr = func.coalesce(Complaint.final_priority, Complaint.suggested_priority, "Normal")
+    priority_counts = (
+        db.session.query(priority_expr, func.count(Complaint.id))
+        .group_by(priority_expr)
+        .all()
+    )
+    priority_data = [{"priority": p[0], "count": p[1]} for p in priority_counts]
+
+    # Submission trend over stated 14-day window (R6: Submission trends)
+    today = datetime.now(timezone.utc).date()
+    start_date = today - timedelta(days=13)
+    start_dt = datetime(start_date.year, start_date.month, start_date.day, tzinfo=timezone.utc)
+    date_col = func.date(Complaint.created_at)
+    raw_trends = (
+        db.session.query(date_col, func.count(Complaint.id))
+        .filter(Complaint.created_at >= start_dt)
+        .group_by(date_col)
+        .all()
+    )
+    trend_map = {}
+    for d, cnt in raw_trends:
+        if d is not None:
+            trend_map[str(d)[:10]] = cnt
+
+    submission_trend = []
+    for i in range(14):
+        day_str = (start_date + timedelta(days=i)).isoformat()
+        submission_trend.append({
+            "date": day_str,
+            "count": trend_map.get(day_str, 0),
+        })
+
+    # Multi-report issues view (Aggregated incident groups with multiple linked reports)
+    # DEFINITION: Master issues that link 2 or more distinct complaint reports into a single operational item.
+    # QUERY: Joined query between Issue and IssueComplaintLink grouped by Issue.id with HAVING COUNT(links) > 1.
+    # Note: Named "Multi-report Issues" because it aggregates co-occurring incident reports, distinguishing them
+    # from issues that recur chronologically after verified resolution.
+    multi_report_rows = (
+        db.session.query(
+            Issue.id,
+            Issue.title,
+            Issue.category,
+            Issue.building,
+            Issue.status,
+            Issue.priority,
+            func.count(IssueComplaintLink.id).label("report_count"),
+            func.max(Complaint.created_at).label("last_reported_at"),
+        )
+        .join(IssueComplaintLink, IssueComplaintLink.issue_id == Issue.id)
+        .join(Complaint, IssueComplaintLink.complaint_id == Complaint.id)
+        .group_by(Issue.id)
+        .having(func.count(IssueComplaintLink.id) > 1)
+        .order_by(func.count(IssueComplaintLink.id).desc())
+        .limit(10)
+        .all()
+    )
+    multi_report_issues = [
+        {
+            "id": r[0],
+            "title": r[1],
+            "category": r[2],
+            "building": r[3],
+            "status": r[4],
+            "priority": r[5],
+            "report_count": r[6],
+            "last_reported_at": r[7].isoformat() if r[7] else None,
+        }
+        for r in multi_report_rows
+    ]
+
     return jsonify({
         "metrics": {
             "total_submissions": total_submissions,
@@ -194,6 +266,10 @@ def admin_dashboard():
             "disputed_resolutions": disputed_resolutions,
         },
         "category_breakdown": category_data,
+        "priority_breakdown": priority_data,
+        "submission_trend": submission_trend,
+        "multi_report_issues": multi_report_issues,
+        "recurring_issues": multi_report_issues,  # Preserved as backwards-compatible alias
         "issue_status_breakdown": status_data,
         "location_breakdown": location_data,
     })

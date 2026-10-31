@@ -1,5 +1,6 @@
 import io
 from PIL import Image
+from app.extensions import db
 from app.models.complaint import Complaint
 
 
@@ -91,7 +92,7 @@ def test_image_validation_and_metadata_stripping(client, verified_user, app):
     assert res.status_code == 201
     comp_id = res.get_json()["id"]
 
-    complaint = Complaint.query.get(comp_id)
+    complaint = db.session.get(Complaint, comp_id)
     assert len(complaint.attachments) == 1
     att = complaint.attachments[0]
     assert att.mime_type == "image/jpeg"
@@ -113,4 +114,42 @@ def test_image_validation_and_metadata_stripping(client, verified_user, app):
     )
     assert res_bad.status_code == 400
     assert "image validation failed" in res_bad.get_json()["error"].lower()
+
+
+def test_admin_and_handler_cannot_submit_complaints(client, handler_user, admin_user):
+    """Test that handlers and admins are restricted from filing student complaints."""
+    # 1. Handler login & attempt
+    client.post(
+        "/api/auth/login",
+        json={"email": handler_user.email, "password": "HandlerPass123!"},
+    )
+    res_handler = client.post(
+        "/api/complaints",
+        json={
+            "title": "Handler filing test complaint",
+            "description": "Handler should not be allowed to submit student complaints.",
+            "submission_type": "complaint",
+            "building": "Academic Block A",
+        },
+    )
+    assert res_handler.status_code == 403
+    assert "cannot submit student complaints" in res_handler.get_json()["error"].lower()
+
+    # 2. Admin login & attempt
+    client.post(
+        "/api/auth/login",
+        json={"email": admin_user.email, "password": "AdminPass123!"},
+    )
+    res_admin = client.post(
+        "/api/complaints",
+        json={
+            "title": "Admin filing test complaint",
+            "description": "Admin should not be allowed to submit student complaints.",
+            "submission_type": "complaint",
+            "building": "Academic Block A",
+        },
+    )
+    assert res_admin.status_code == 403
+    assert "cannot submit student complaints" in res_admin.get_json()["error"].lower()
+
 

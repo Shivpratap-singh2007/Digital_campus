@@ -300,7 +300,7 @@ def verify_token(raw_token: str) -> tuple[bool, str, User | None]:
         return False, "This verification link has expired. Please request a new one.", None
 
     # Mark token used and verify user
-    user = User.query.get(token_record.user_id)
+    user = db.session.get(User, token_record.user_id)
     if not user:
         return False, "Associated user account not found.", None
 

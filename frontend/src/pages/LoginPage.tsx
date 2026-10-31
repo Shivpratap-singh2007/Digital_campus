@@ -18,6 +18,12 @@ export const LoginPage: React.FC = () => {
     fetchCsrfToken();
   }, []);
 
+  const handleQuickLogin = (demoEmail: string, demoPw: string) => {
+    setEmail(demoEmail);
+    setPassword(demoPw);
+    setError('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return; // Prevent duplicate submissions
@@ -89,6 +95,39 @@ export const LoginPage: React.FC = () => {
                   'Sign In'
                 )}
               </button>
+
+              {/* 1-Click Quick Demo Login Section */}
+              <div className="mt-3 p-3 rounded" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <span className="small text-muted fw-semibold d-block mb-2 text-center">
+                  ⚡ 1-Click Quick Demo Login:
+                </span>
+                <div className="d-flex flex-column gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-between px-3"
+                    onClick={() => handleQuickLogin('student.aarav@campus.edu', 'StudentPass123!')}
+                  >
+                    <span>🎓 Student (Aarav)</span>
+                    <span className="badge bg-primary-subtle text-primary">Autofill</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-between px-3"
+                    onClick={() => handleQuickLogin('admin@campus.edu', 'AdminPass123!')}
+                  >
+                    <span>🛡️ Administrator</span>
+                    <span className="badge bg-danger-subtle text-danger">Autofill</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-between px-3"
+                    onClick={() => handleQuickLogin('handler@campus.edu', 'HandlerPass123!')}
+                  >
+                    <span>🔧 Operational Handler</span>
+                    <span className="badge bg-secondary-subtle text-secondary">Autofill</span>
+                  </button>
+                </div>
+              </div>
             </form>
 
             <div className="text-center mt-4 pt-3 border-top">

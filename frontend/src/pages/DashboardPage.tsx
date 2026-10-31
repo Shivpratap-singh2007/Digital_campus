@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BarChart,
   Bar,
@@ -11,10 +12,20 @@ import {
   Pie,
   Cell,
   Legend,
+  AreaChart,
+  Area,
 } from 'recharts';
 import { api } from '../api/client';
+import { StatusBadge } from '../components/StatusBadge';
 
 const CHART_PALETTE = ['#2563eb', '#0284c7', '#0d9488', '#16a34a', '#ea580c', '#dc2626', '#64748b'];
+
+const PRIORITY_COLORS: Record<string, string> = {
+  'Urgent review': '#dc2626',
+  'High': '#ea580c',
+  'Normal': '#2563eb',
+  'Low': '#64748b',
+};
 
 export const DashboardPage: React.FC = () => {
   const [data, setData] = useState<any>(null);
@@ -58,6 +69,9 @@ export const DashboardPage: React.FC = () => {
   const catData = data.category_breakdown || [];
   const statusData = data.issue_status_breakdown || [];
   const locData = data.location_breakdown || [];
+  const priorityData = data.priority_breakdown || [];
+  const trendData = data.submission_trend || [];
+  const multiReportData = data.multi_report_issues || data.recurring_issues || [];
 
   return (
     <div>
@@ -117,7 +131,108 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Recharts Visualizations */}
+      {/* Row 1: Submission Trends & Priority Distribution (R6 Requirements) */}
+      <div className="row g-4 mb-4">
+        <div className="col-lg-7">
+          <div className="cv-card h-100">
+            <div className="cv-card-header d-flex justify-content-between align-items-center">
+              <h6 className="mb-0 fw-bold text-dark">Submission Trends (Last 14 Days)</h6>
+              <span className="cv-badge cv-badge-low" style={{ fontSize: '0.72rem' }}>14-day window</span>
+            </div>
+            <div className="cv-card-body" style={{ height: '300px' }}>
+              {trendData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trendData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
+                    <defs>
+                      <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(val: string) => (val ? val.slice(5) : '')}
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      stroke="#cbd5e1"
+                    />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        fontSize: '0.82rem',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                      }}
+                      labelFormatter={(label) => `Date: ${label}`}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      name="Submissions"
+                      stroke="#2563eb"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#trendGradient)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center text-muted pt-5">No recent submission trends available.</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-lg-5">
+          <div className="cv-card h-100">
+            <div className="cv-card-header">
+              <h6 className="mb-0 fw-bold text-dark">Priority Levels Distribution</h6>
+            </div>
+            <div className="cv-card-body" style={{ height: '300px' }}>
+              {priorityData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={priorityData} margin={{ top: 20, right: 20, left: -10, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis
+                      dataKey="priority"
+                      tick={{ fontSize: 11, fill: '#64748b' }}
+                      stroke="#cbd5e1"
+                    />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#64748b' }} stroke="#cbd5e1" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '6px',
+                        fontSize: '0.82rem',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                      }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      name="Reports"
+                      radius={[4, 4, 0, 0]}
+                    >
+                      {priorityData.map((entry: any, index: number) => (
+                        <Cell
+                          key={`cell-pri-${index}`}
+                          fill={PRIORITY_COLORS[entry.priority] || CHART_PALETTE[index % CHART_PALETTE.length]}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center text-muted pt-5">No priority data recorded.</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Row 2: Recharts Visualizations (Category & Operational Status) */}
       <div className="row g-4 mb-4">
         <div className="col-lg-6">
           <div className="cv-card h-100">
@@ -197,13 +312,78 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Standalone Numerical Breakdown Tables */}
+      {/* Row 3: Multi-report Issues View (Aggregated Incident Groups) */}
+      <div className="cv-card mb-4 overflow-hidden">
+        <div className="cv-card-header d-flex justify-content-between align-items-center">
+          <h6 className="mb-0 fw-bold text-dark">
+            <i className="bi bi-collection me-2 text-primary"></i>
+            Multi-report Issues (Aggregated Incident Groups)
+          </h6>
+          <span className="cv-badge cv-badge-low" style={{ fontSize: '0.72rem' }}>
+            {multiReportData.length} Identified
+          </span>
+        </div>
+        <div className="cv-card-body p-0">
+          {multiReportData.length > 0 ? (
+            <div className="table-responsive">
+              <table className="cv-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '80px' }}>Issue ID</th>
+                    <th>Master Issue Title</th>
+                    <th>Category</th>
+                    <th>Location</th>
+                    <th className="text-center" style={{ width: '120px' }}>Linked Reports</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th style={{ width: '100px' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {multiReportData.map((r: any) => (
+                    <tr key={r.id}>
+                      <td className="font-monospace text-muted">#{r.id}</td>
+                      <td className="fw-medium text-dark">{r.title}</td>
+                      <td>
+                        <span className="cv-badge cv-badge-low">{r.category}</span>
+                      </td>
+                      <td className="text-muted small">{r.building}</td>
+                      <td className="text-center">
+                        <span className="badge bg-primary-subtle text-primary border px-2 py-1 font-monospace">
+                          {r.report_count} reports
+                        </span>
+                      </td>
+                      <td>
+                        <StatusBadge type="priority" value={r.priority} />
+                      </td>
+                      <td>
+                        <StatusBadge type="status" value={r.status} />
+                      </td>
+                      <td>
+                        <Link to={`/issues/${r.id}`} className="btn btn-outline-primary btn-sm py-0 px-2" style={{ fontSize: '0.75rem' }}>
+                          View Issue
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-4 text-center text-muted small">
+              No multi-report issues with multiple linked reports currently detected.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Row 4: Standalone Numerical Breakdown Tables */}
       <div className="row g-4 mb-4">
         {/* Category Table */}
-        <div className="col-lg-6">
+        <div className="col-lg-4">
           <div className="cv-card h-100 overflow-hidden">
             <div className="cv-card-header">
-              <h6 className="mb-0 fw-bold text-dark">Category Breakdown Table</h6>
+              <h6 className="mb-0 fw-bold text-dark">Category Breakdown</h6>
             </div>
             <div className="cv-card-body p-0">
               {catData.length > 0 ? (
@@ -211,8 +391,8 @@ export const DashboardPage: React.FC = () => {
                   <thead>
                     <tr>
                       <th>Category</th>
-                      <th className="text-end">Submissions</th>
-                      <th className="text-end" style={{ width: '120px' }}>Proportion</th>
+                      <th className="text-end">Count</th>
+                      <th className="text-end" style={{ width: '80px' }}>Ratio</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -223,7 +403,7 @@ export const DashboardPage: React.FC = () => {
                         <td className="text-end">
                           <span className="cv-badge cv-badge-low">
                             {m.total_submissions > 0
-                              ? `${((c.count / m.total_submissions) * 100).toFixed(1)}%`
+                              ? `${((c.count / m.total_submissions) * 100).toFixed(0)}%`
                               : '0%'}
                           </span>
                         </td>
@@ -238,20 +418,61 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Operational Status Table */}
-        <div className="col-lg-6">
+        {/* Priority Table */}
+        <div className="col-lg-4">
           <div className="cv-card h-100 overflow-hidden">
             <div className="cv-card-header">
-              <h6 className="mb-0 fw-bold text-dark">Operational Status Table</h6>
+              <h6 className="mb-0 fw-bold text-dark">Priority Levels</h6>
+            </div>
+            <div className="cv-card-body p-0">
+              {priorityData.length > 0 ? (
+                <table className="cv-table">
+                  <thead>
+                    <tr>
+                      <th>Priority Level</th>
+                      <th className="text-end">Count</th>
+                      <th className="text-end" style={{ width: '80px' }}>Ratio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {priorityData.map((p: any) => (
+                      <tr key={p.priority}>
+                        <td className="fw-medium text-dark">
+                          <StatusBadge type="priority" value={p.priority} />
+                        </td>
+                        <td className="text-end font-monospace">{p.count}</td>
+                        <td className="text-end">
+                          <span className="cv-badge cv-badge-low">
+                            {m.total_submissions > 0
+                              ? `${((p.count / m.total_submissions) * 100).toFixed(0)}%`
+                              : '0%'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-muted small p-4 mb-0">No priority activity recorded.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Operational Status Table */}
+        <div className="col-lg-4">
+          <div className="cv-card h-100 overflow-hidden">
+            <div className="cv-card-header">
+              <h6 className="mb-0 fw-bold text-dark">Operational Status</h6>
             </div>
             <div className="cv-card-body p-0">
               {statusData.length > 0 ? (
                 <table className="cv-table">
                   <thead>
                     <tr>
-                      <th>Operational Status</th>
+                      <th>Status</th>
                       <th className="text-end">Count</th>
-                      <th className="text-end" style={{ width: '120px' }}>Proportion</th>
+                      <th className="text-end" style={{ width: '80px' }}>Ratio</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -262,7 +483,7 @@ export const DashboardPage: React.FC = () => {
                         <td className="text-end">
                           <span className="cv-badge cv-badge-low">
                             {m.distinct_issues > 0
-                              ? `${((s.count / m.distinct_issues) * 100).toFixed(1)}%`
+                              ? `${((s.count / m.distinct_issues) * 100).toFixed(0)}%`
                               : '0%'}
                           </span>
                         </td>
@@ -278,7 +499,7 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Top Report Locations Across Campus */}
+      {/* Row 5: Top Report Locations Across Campus */}
       <div className="cv-card">
         <div className="cv-card-header">
           <h6 className="mb-0 fw-bold text-dark">Top Report Locations Across Campus</h6>

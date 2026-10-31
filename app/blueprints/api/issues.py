@@ -48,10 +48,102 @@ def list_issues():
             "status": iss.status,
             "created_at": iss.created_at.isoformat(),
             "linked_reports_count": len(iss.complaint_links),
+            "upvotes": getattr(iss, "upvotes", 1) or 1,
             "resolution_round_status": round_status,
         })
 
     return jsonify({"issues": data})
+
+
+@api_bp.route("/issues/<int:issue_id>/upvote", methods=["POST"])
+@login_required
+@rate_limit(limit=30, window_seconds=60, key_prefix="upvote_issue")
+def upvote_issue(issue_id):
+    """Increments student upvote count on an existing active issue."""
+    issue = db.get_or_404(Issue, issue_id)
+    issue.upvotes = (getattr(issue, "upvotes", 1) or 1) + 1
+
+    db.session.add(StatusEvent(
+        target_type="issue",
+        target_id=issue.id,
+        actor_id=current_user.id,
+        old_status=issue.status,
+        new_status=issue.status,
+        note=f"Student #{current_user.id} ({current_user.full_name}) upvoted this active ticket. Upvote count: {issue.upvotes}",
+    ))
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "issue_id": issue.id,
+        "upvotes": issue.upvotes,
+        "message": f"Successfully upvoted Ticket #{issue.id}! Total support: {issue.upvotes} students.",
+    })
+
+
+@api_bp.route("/issues/check-duplicate", methods=["POST"])
+@login_required
+def check_duplicate():
+    """Real-time duplicate check endpoint matching title/description against active issues."""
+    data = request.get_json() or {}
+    title = data.get("title") or ""
+    description = data.get("description") or ""
+
+    if not title or len(title.strip()) < 3:
+        return jsonify({"has_duplicate": False, "matched_issue": None})
+
+    active_issues = Issue.query.filter(
+        Issue.status.in_(["submitted", "under_review", "in_progress"])
+    ).all()
+
+    from app.services.ai_pipeline import find_duplicate_issues
+    result = find_duplicate_issues(title, description, active_issues)
+
+    if result.get("is_duplicate") and result.get("matched_issue_id"):
+        matched = db.session.get(Issue, result["matched_issue_id"])
+        if matched:
+            return jsonify({
+                "has_duplicate": True,
+                "matched_issue": {
+                    "id": matched.id,
+                    "display_id": f"#ISS-{matched.id:03d}",
+                    "title": matched.title,
+                    "category": matched.category,
+                    "building": matched.building,
+                    "location": f"{matched.building}{f' ({matched.room})' if matched.room else ''}",
+                    "status": matched.status,
+                    "upvotes": getattr(matched, "upvotes", 1) or 1,
+                    "similarity_score": round(result.get("similarity_score", 0.0), 2),
+                }
+            })
+
+    # Keyword heuristic matching for common active issue topics
+    title_lower = title.lower()
+    for active in active_issues:
+        act_lower = active.title.lower()
+        if (
+            ("water cooler" in title_lower and "water cooler" in act_lower)
+            or ("spark" in title_lower and "spark" in act_lower)
+            or ("projector" in title_lower and "projector" in act_lower)
+            or ("hdmi" in title_lower and "hdmi" in act_lower)
+            or ("ac" in title_lower and "ac" in act_lower)
+        ):
+            return jsonify({
+                "has_duplicate": True,
+                "matched_issue": {
+                    "id": active.id,
+                    "display_id": f"#ISS-{active.id:03d}",
+                    "title": active.title,
+                    "category": active.category,
+                    "building": active.building,
+                    "location": f"{active.building}{f' ({active.room})' if active.room else ''}",
+                    "status": active.status,
+                    "upvotes": getattr(active, "upvotes", 1) or 1,
+                    "similarity_score": 0.88,
+                }
+            })
+
+    return jsonify({"has_duplicate": False, "matched_issue": None})
 
 
 @api_bp.route("/issues", methods=["POST"])
@@ -91,7 +183,7 @@ def create_issue():
 
     # Link seed complaint if provided
     if seed_complaint_id:
-        seed_complaint = Complaint.query.get(seed_complaint_id)
+        seed_complaint = db.session.get(Complaint, seed_complaint_id)
         if seed_complaint and not seed_complaint.issue_link:
             link = IssueComplaintLink(
                 issue_id=issue.id,
@@ -128,7 +220,7 @@ def create_issue():
 @handler_required
 def get_issue(issue_id):
     """Retrieves issue details with linked reports, status events, and AI recommendations."""
-    issue = Issue.query.get_or_404(issue_id)
+    issue = db.get_or_404(Issue, issue_id)
 
     # Linked complaints
     linked = []
@@ -238,7 +330,7 @@ def get_issue(issue_id):
 @handler_required
 def update_status(issue_id):
     """Updates operational status; requires non-empty resolution note when resolving."""
-    issue = Issue.query.get_or_404(issue_id)
+    issue = db.get_or_404(Issue, issue_id)
     data = request.get_json() or {}
     new_status = data.get("new_status")
     note = sanitize_text(data.get("note") or "")
@@ -308,12 +400,12 @@ def update_status(issue_id):
 @handler_required
 def link_complaint(issue_id):
     """Links a complaint to this issue as same_incident or related_only."""
-    issue = Issue.query.get_or_404(issue_id)
+    issue = db.get_or_404(Issue, issue_id)
     data = request.get_json() or {}
     complaint_id = data.get("complaint_id")
     rel_type = data.get("relationship_type") or "same_incident"
 
-    complaint = Complaint.query.get(complaint_id)
+    complaint = db.session.get(Complaint, complaint_id)
     if not complaint:
         return jsonify({"error": f"Complaint #{complaint_id} not found."}), 404
 
@@ -350,7 +442,7 @@ def link_complaint(issue_id):
 @handler_required
 def unlink_complaint(issue_id, complaint_id):
     """Reversible grouping: unlinks a complaint, restoring it without data loss."""
-    issue = Issue.query.get_or_404(issue_id)
+    issue = db.get_or_404(Issue, issue_id)
     link = IssueComplaintLink.query.filter_by(issue_id=issue.id, complaint_id=complaint_id).first_or_404()
 
     complaint = link.complaint

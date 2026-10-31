@@ -31,7 +31,7 @@ def create_issue():
     seed_complaint_id = request.args.get("from_complaint", type=int)
     seed_complaint = None
     if seed_complaint_id:
-        seed_complaint = Complaint.query.get(seed_complaint_id)
+        seed_complaint = db.session.get(Complaint, seed_complaint_id)
         if seed_complaint and request.method == "GET":
             form.title.data = f"Issue: {seed_complaint.title}"
             form.description.data = seed_complaint.description
@@ -102,7 +102,7 @@ def detail(issue_id):
         return send_from_directory(frontend_dist, "index.html")
 
     require_handler()
-    issue = Issue.query.get_or_404(issue_id)
+    issue = db.get_or_404(Issue, issue_id)
 
     status_form = StatusUpdateForm(new_status=issue.status)
     link_form = LinkComplaintForm()
@@ -160,7 +160,7 @@ def detail(issue_id):
 @login_required
 def update_status(issue_id):
     require_handler()
-    issue = Issue.query.get_or_404(issue_id)
+    issue = db.get_or_404(Issue, issue_id)
     form = StatusUpdateForm()
 
     if form.validate_on_submit():
@@ -234,14 +234,14 @@ def update_status(issue_id):
 @login_required
 def link_complaint(issue_id):
     require_handler()
-    issue = Issue.query.get_or_404(issue_id)
+    issue = db.get_or_404(Issue, issue_id)
     form = LinkComplaintForm()
 
     if form.validate_on_submit():
         complaint_id = form.complaint_id.data
         rel_type = form.relationship_type.data
 
-        complaint = Complaint.query.get(complaint_id)
+        complaint = db.session.get(Complaint, complaint_id)
         if not complaint:
             flash(f"Complaint #{complaint_id} not found.", "danger")
             return redirect(url_for("issues.detail", issue_id=issue.id))
@@ -292,7 +292,7 @@ def unlink_complaint(issue_id, complaint_id):
     preserving the original complaint and logging the action.
     """
     require_handler()
-    issue = Issue.query.get_or_404(issue_id)
+    issue = db.get_or_404(Issue, issue_id)
     link = IssueComplaintLink.query.filter_by(issue_id=issue.id, complaint_id=complaint_id).first_or_404()
 
     complaint = link.complaint

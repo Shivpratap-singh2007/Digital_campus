@@ -16,6 +16,7 @@ class Issue(db.Model):
         db.String(30), nullable=False, default="submitted", index=True
     )  # 'submitted', 'under_review', 'in_progress', 'resolved'
     priority = db.Column(db.String(30), nullable=False, default="Normal")
+    upvotes = db.Column(db.Integer, nullable=False, default=1)
 
     created_by_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)

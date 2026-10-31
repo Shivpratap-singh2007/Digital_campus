@@ -123,7 +123,7 @@ def reveal_identity(complaint_id):
 @login_required
 def retry_analysis(complaint_id):
     require_handler()
-    complaint = Complaint.query.get_or_404(complaint_id)
+    complaint = db.get_or_404(Complaint, complaint_id)
     success = run_complaint_analysis(complaint)
 
     if success:
@@ -138,7 +138,7 @@ def retry_analysis(complaint_id):
 @login_required
 def set_final_attributes(complaint_id):
     require_handler()
-    complaint = Complaint.query.get_or_404(complaint_id)
+    complaint = db.get_or_404(Complaint, complaint_id)
 
     final_cat = request.form.get("final_category", "").strip()
     final_prio = request.form.get("final_priority", "").strip()
