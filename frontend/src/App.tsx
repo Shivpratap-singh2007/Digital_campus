@@ -106,7 +106,11 @@ const AppShell: React.FC = () => {
               path="/my-complaints"
               element={
                 <ProtectedRoute>
-                  <MyComplaintsPage />
+                  {user && (user.is_handler || user.is_admin || user.role === 'admin' || user.role === 'handler') ? (
+                    <Navigate to="/admin/queue" replace />
+                  ) : (
+                    <MyComplaintsPage />
+                  )}
                 </ProtectedRoute>
               }
             />

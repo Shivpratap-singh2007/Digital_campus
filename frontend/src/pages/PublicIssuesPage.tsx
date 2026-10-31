@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
+import { useAuth } from '../context/AuthContext';
 import { StatusBadge } from '../components/StatusBadge';
 
 export const PublicIssuesPage: React.FC = () => {
+  const { user } = useAuth();
   const [issues, setIssues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,10 +65,23 @@ export const PublicIssuesPage: React.FC = () => {
             Transparent campus operations tracking verified maintenance and infrastructure progress.
           </p>
         </div>
-        <Link to="/new-complaint" className="btn btn-primary d-inline-flex align-items-center gap-2">
-          <i className="bi bi-plus-lg"></i>
-          <span>Report an Issue</span>
-        </Link>
+        {user && (user.is_handler || user.is_admin || user.role === 'admin' || user.role === 'handler') ? (
+          <div className="d-flex gap-2">
+            <Link to="/admin/create-issue" className="btn btn-primary d-inline-flex align-items-center gap-2">
+              <i className="bi bi-plus-lg"></i>
+              <span>Create Master Issue</span>
+            </Link>
+            <Link to="/admin/queue" className="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+              <i className="bi bi-list-task"></i>
+              <span>Issues Queue</span>
+            </Link>
+          </div>
+        ) : (
+          <Link to="/new-complaint" className="btn btn-primary d-inline-flex align-items-center gap-2">
+            <i className="bi bi-plus-lg"></i>
+            <span>Report an Issue</span>
+          </Link>
+        )}
       </div>
 
       {/* Filter Toolbar */}

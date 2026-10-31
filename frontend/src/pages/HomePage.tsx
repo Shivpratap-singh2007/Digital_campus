@@ -86,22 +86,53 @@ export const HomePage: React.FC = () => {
                 Report campus issues and track their progress.
               </p>
 
-              <div className="d-flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  className="btn btn-primary btn-lg px-4 py-2 d-inline-flex align-items-center gap-2 fs-6 fw-semibold shadow-sm"
-                  onClick={openSubmitModal}
-                >
-                  <i className="bi bi-plus-lg"></i>
-                  <span>Submit Report</span>
-                </button>
-                <Link
-                  to={user ? "/my-complaints" : "/login"}
-                  className="btn btn-outline-secondary btn-lg px-4 py-2 fs-6 fw-medium"
-                >
-                  My Reports
-                </Link>
-              </div>
+              {user && (user.is_handler || user.is_admin || user.role === 'admin' || user.role === 'handler') ? (
+                <div className="d-flex flex-column gap-2">
+                  <div className="d-flex flex-wrap gap-3">
+                    <Link
+                      to="/admin/dashboard"
+                      className="btn btn-primary btn-lg px-4 py-2 d-inline-flex align-items-center gap-2 fs-6 fw-semibold shadow-sm"
+                    >
+                      <i className="bi bi-graph-up-arrow"></i>
+                      <span>Executive Dashboard</span>
+                    </Link>
+                    <Link
+                      to="/admin/queue"
+                      className="btn btn-outline-primary btn-lg px-4 py-2 d-inline-flex align-items-center gap-2 fs-6 fw-medium"
+                    >
+                      <i className="bi bi-list-task"></i>
+                      <span>All Issues Queue</span>
+                    </Link>
+                    <Link
+                      to="/admin/create-issue"
+                      className="btn btn-outline-secondary btn-lg px-4 py-2 fs-6 fw-medium"
+                    >
+                      <span>Create Master Issue</span>
+                    </Link>
+                  </div>
+                  <div className="text-muted small mt-1">
+                    <i className="bi bi-shield-check text-success me-1"></i>
+                    Signed in as <strong>{user.full_name}</strong> ({user.is_admin ? 'Administrator' : 'Handler'}). Administrative accounts manage and resolve campus issues.
+                  </div>
+                </div>
+              ) : (
+                <div className="d-flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-lg px-4 py-2 d-inline-flex align-items-center gap-2 fs-6 fw-semibold shadow-sm"
+                    onClick={openSubmitModal}
+                  >
+                    <i className="bi bi-plus-lg"></i>
+                    <span>Submit Report</span>
+                  </button>
+                  <Link
+                    to={user ? "/my-complaints" : "/login"}
+                    className="btn btn-outline-secondary btn-lg px-4 py-2 fs-6 fw-medium"
+                  >
+                    My Reports
+                  </Link>
+                </div>
+              )}
             </div>
 
         {/* Overview Metrics Widget */}
