@@ -3,6 +3,12 @@ from app.models.complaint import Complaint, Attachment, AnalysisResult
 from app.models.issue import Issue, IssueComplaintLink, StatusEvent
 from app.models.feedback import ResolutionRound, ResolutionFeedback
 from app.models.audit import AuditEvent
+from app.models.radar import (
+    InfrastructureDependency,
+    DependencyLocation,
+    RadarSuggestion,
+    RadarSuggestionReport,
+)
 
 __all__ = [
     "User",
@@ -16,4 +22,8 @@ __all__ = [
     "ResolutionRound",
     "ResolutionFeedback",
     "AuditEvent",
+    "InfrastructureDependency",
+    "DependencyLocation",
+    "RadarSuggestion",
+    "RadarSuggestionReport",
 ]

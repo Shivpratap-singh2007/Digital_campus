@@ -235,3 +235,22 @@ def seed_demo(admin_password, handler_password, student_password):
         for conf in res['conflicts']:
             click.echo(f"  ! {conf['reason']}")
     click.echo("Synthetic demo data provisioning complete.")
+
+
+@cli_bp.cli.command("radar-seed-demo")
+def radar_seed_demo():
+    """Explicitly provisions synthetic demo infrastructure dependencies for Incident Radar."""
+    from app.services.incident_radar import seed_synthetic_radar_demo
+    click.echo("Provisioning synthetic demo infrastructure dependencies...")
+    res = seed_synthetic_radar_demo()
+    click.echo(f"Radar Demo Seed: status={res['status']}, dependency={res['dependency']}, locations={res['locations_count']}")
+
+
+@cli_bp.cli.command("radar-scan")
+def radar_scan():
+    """Runs a bounded incident radar correlation scan across eligible active reports."""
+    from app.services.incident_radar import run_incident_radar_analysis
+    click.echo("Running Incident Radar correlation analysis...")
+    res = run_incident_radar_analysis()
+    click.echo(f"Scanned: {res['scanned_reports_count']} reports | New suggestions: {res['created_suggestions_count']} | Preserved: {res['preserved_suggestions_count']}")
+

@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import { api } from '../api/client';
 import { StatusBadge } from '../components/StatusBadge';
+import { CampusIncidentRadar } from '../components/CampusIncidentRadar';
 
 const CHART_PALETTE = ['#2563eb', '#0284c7', '#0d9488', '#16a34a', '#ea580c', '#dc2626', '#64748b'];
 
@@ -581,6 +582,9 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Campus Incident Radar (Operational Correlation Advisory) */}
+      <CampusIncidentRadar />
 
       {/* 7. Row 3: Multi-report Issues View (Aggregated Master Groups with Search) */}
       <div className="cv-card mb-4 overflow-hidden">

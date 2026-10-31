@@ -8,9 +8,19 @@ from app.models.complaint import Complaint
 from app.models.issue import Issue, IssueComplaintLink
 from app.models.feedback import ResolutionRound
 from app.models.audit import AuditEvent
+from app.models.radar import (
+    InfrastructureDependency,
+    DependencyLocation,
+    RadarSuggestion,
+    RadarSuggestionReport,
+)
 from app.services.audit import reveal_complaint_submitter
 from app.services.security import admin_required, handler_required, sanitize_text
 from app.services.rate_limiter import rate_limit
+from app.services.incident_radar import (
+    run_incident_radar_analysis,
+    seed_synthetic_radar_demo,
+)
 
 
 @api_bp.route("/admin/queue", methods=["GET"])
@@ -358,4 +368,253 @@ def admin_audit_log():
     } for ev in events]
 
     return jsonify({"audit_events": data})
+
+
+# ==============================================================================
+# CAMPUS INCIDENT RADAR (Advisory Multi-Report Correlation)
+# ==============================================================================
+
+@api_bp.route("/admin/radar", methods=["GET"])
+@login_required
+@handler_required
+def list_radar_suggestions():
+    """
+    Lists Campus Incident Radar suggestions for operational triage review.
+    PRIVACY GUARANTEE: Submitter names and emails are strictly omitted.
+    """
+    status_filter = request.args.get("status", "").strip()
+    type_filter = request.args.get("type", "").strip()
+    building_filter = request.args.get("building", "").strip()
+
+    query = RadarSuggestion.query
+
+    if status_filter and status_filter != "all":
+        query = query.filter(RadarSuggestion.status == status_filter)
+    if type_filter:
+        query = query.filter(RadarSuggestion.suggestion_type == type_filter)
+    if building_filter:
+        query = query.filter(RadarSuggestion.building == building_filter)
+
+    suggestions = query.order_by(RadarSuggestion.created_at.desc()).limit(50).all()
+
+    data = []
+    for s in suggestions:
+        ev = s.evidence
+        # Anonymized report references (no user PII)
+        reports_summary = []
+        for r in s.reports:
+            c = r.complaint
+            if c:
+                reports_summary.append({
+                    "id": c.id,
+                    "title": c.title,
+                    "building": c.building,
+                    "room": c.room,
+                    "display_category": c.display_category,
+                    "display_priority": c.display_priority,
+                    "status": c.status,
+                    "detected_symptom": r.detected_symptom,
+                    "matched_asset_name": r.matched_asset_name,
+                    "created_at": c.created_at.isoformat(),
+                })
+
+        data.append({
+            "id": s.id,
+            "suggestion_type": s.suggestion_type,
+            "status": s.status,
+            "building": s.building,
+            "headline": s.headline,
+            "summary": s.summary,
+            "dependency_name": s.dependency.name if s.dependency else None,
+            "dependency_identifier": s.dependency.dependency_identifier if s.dependency else None,
+            "dependency_type": s.dependency.dependency_type if s.dependency else None,
+            "reports_count": len(s.reports),
+            "reports": reports_summary,
+            "time_window_start": ev.get("time_window_start"),
+            "time_window_end": ev.get("time_window_end"),
+            "time_span_hours": ev.get("time_span_hours"),
+            "evidence_level": ev.get("evidence_level"),
+            "warning": ev.get("warning", "Suggested connection, not a confirmed cause."),
+            "review_decision": s.review_decision,
+            "reviewed_at": s.reviewed_at.isoformat() if s.reviewed_at else None,
+            "reviewed_by_name": s.reviewer.full_name if s.reviewer else None,
+            "review_notes": s.review_notes,
+            "clarification_notes": s.clarification_notes,
+            "created_at": s.created_at.isoformat(),
+            "updated_at": s.updated_at.isoformat(),
+        })
+
+    return jsonify({
+        "suggestions": data,
+        "count": len(data),
+        "total_active_suggestions": RadarSuggestion.query.filter_by(status="pending_review").count(),
+    })
+
+
+@api_bp.route("/admin/radar/<int:suggestion_id>", methods=["GET"])
+@login_required
+@handler_required
+def get_radar_suggestion(suggestion_id):
+    """
+    Returns full evidence snapshot and report details for a radar suggestion.
+    PRIVACY GUARANTEE: Submitter names and emails are strictly omitted.
+    """
+    s = db.get_or_404(RadarSuggestion, suggestion_id)
+    ev = s.evidence
+
+    reports_data = []
+    for r in s.reports:
+        c = r.complaint
+        if c:
+            reports_data.append({
+                "id": c.id,
+                "title": c.title,
+                "description": c.description,
+                "building": c.building,
+                "room": c.room,
+                "display_category": c.display_category,
+                "display_priority": c.display_priority,
+                "status": c.status,
+                "detected_symptom": r.detected_symptom,
+                "matched_asset_name": r.matched_asset_name,
+                "created_at": c.created_at.isoformat(),
+            })
+
+    return jsonify({
+        "id": s.id,
+        "suggestion_type": s.suggestion_type,
+        "status": s.status,
+        "building": s.building,
+        "headline": s.headline,
+        "summary": s.summary,
+        "dependency_name": s.dependency.name if s.dependency else None,
+        "dependency_identifier": s.dependency.dependency_identifier if s.dependency else None,
+        "dependency_type": s.dependency.dependency_type if s.dependency else None,
+        "reports": reports_data,
+        "evidence": ev,
+        "review_decision": s.review_decision,
+        "reviewed_at": s.reviewed_at.isoformat() if s.reviewed_at else None,
+        "reviewed_by_name": s.reviewer.full_name if s.reviewer else None,
+        "review_notes": s.review_notes,
+        "clarification_notes": s.clarification_notes,
+        "created_at": s.created_at.isoformat(),
+        "updated_at": s.updated_at.isoformat(),
+    })
+
+
+@api_bp.route("/admin/radar/refresh", methods=["POST"])
+@login_required
+@handler_required
+@rate_limit(limit=10, window_seconds=60, key_prefix="radar_refresh")
+def refresh_radar_analysis():
+    """Triggers bounded Incident Radar analysis scan across active complaints."""
+    result = run_incident_radar_analysis()
+    return jsonify({
+        "success": True,
+        "message": "Incident Radar correlation analysis completed.",
+        "telemetry": result,
+    })
+
+
+@api_bp.route("/admin/radar/<int:suggestion_id>/review", methods=["POST"])
+@login_required
+@handler_required
+@rate_limit(limit=30, window_seconds=60, key_prefix="radar_review")
+def review_radar_suggestion(suggestion_id):
+    """
+    Human review decision for an Incident Radar suggestion.
+    Actions:
+    - 'confirm': Confirms for coordinated operational investigation (NOT confirmed root cause).
+    - 'reject': Rejects connection.
+    - 'clarify': Saves internal clarification note.
+    Does NOT auto-merge issues, auto-resolve tickets, or alter complaint statuses.
+    """
+    s = db.get_or_404(RadarSuggestion, suggestion_id)
+    data = request.get_json() or {}
+    action = (data.get("action") or "").strip().lower()
+    notes = sanitize_text(data.get("notes") or "")
+
+    if action not in ("confirm", "reject", "clarify"):
+        return jsonify({"error": "Invalid review action. Must be 'confirm', 'reject', or 'clarify'."}), 400
+
+    now = datetime.now(timezone.utc)
+
+    if action == "confirm":
+        s.status = "confirmed_for_review"
+        s.review_decision = "confirmed"
+        s.reviewed_by_user_id = current_user.id
+        s.reviewed_at = now
+        s.review_notes = notes or "Confirmed for coordinated human operational review."
+    elif action == "reject":
+        s.status = "rejected"
+        s.review_decision = "rejected"
+        s.reviewed_by_user_id = current_user.id
+        s.reviewed_at = now
+        s.review_notes = notes or "Rejected by reviewer: symptoms not operationally connected."
+    elif action == "clarify":
+        s.clarification_notes = notes or "Clarification requested."
+
+    # Audit log entry for review traceability
+    audit = AuditEvent(
+        actor_id=current_user.id,
+        action=f"radar_review_{action}",
+        target_type="radar_suggestion",
+        target_id=s.id,
+        justification=notes or f"Radar suggestion #{s.id} review action: {action}",
+        ip_address=request.remote_addr,
+    )
+    db.session.add(audit)
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "id": s.id,
+        "status": s.status,
+        "review_decision": s.review_decision,
+        "reviewed_at": s.reviewed_at.isoformat() if s.reviewed_at else None,
+        "reviewed_by_name": current_user.full_name,
+        "review_notes": s.review_notes,
+        "clarification_notes": s.clarification_notes,
+        "message": f"Radar suggestion #{s.id} updated successfully.",
+    })
+
+
+@api_bp.route("/admin/radar/dependencies", methods=["GET"])
+@login_required
+@handler_required
+def list_radar_dependencies():
+    """Lists configured infrastructure dependencies and their linked locations."""
+    deps = InfrastructureDependency.query.order_by(InfrastructureDependency.building.asc()).all()
+    data = [
+        {
+            "id": d.id,
+            "dependency_identifier": d.dependency_identifier,
+            "name": d.name,
+            "dependency_type": d.dependency_type,
+            "building": d.building,
+            "description": d.description,
+            "is_synthetic": d.is_synthetic,
+            "locations": [
+                {
+                    "id": loc.id,
+                    "location_name": loc.location_name,
+                    "room": loc.room,
+                    "asset_name": loc.asset_name,
+                }
+                for loc in d.locations
+            ],
+        }
+        for d in deps
+    ]
+    return jsonify({"dependencies": data})
+
+
+@api_bp.route("/admin/radar/seed-demo", methods=["POST"])
+@login_required
+@handler_required
+def seed_radar_demo():
+    """Explicit endpoint to provision synthetic demo infrastructure dependencies."""
+    res = seed_synthetic_radar_demo()
+    return jsonify({"success": True, "result": res})
+
 
