@@ -48,6 +48,14 @@ export const Navbar: React.FC = () => {
                   <>
                     <li className="nav-item">
                       <Link
+                        className={`nav-link ${isActive('/admin/dashboard') ? 'active' : ''}`}
+                        to="/admin/dashboard"
+                      >
+                        <i className="bi bi-graph-up me-1 text-primary"></i>Dashboard & Analytics
+                      </Link>
+                    </li>
+                    <li className="nav-item">
+                      <Link
                         className={`nav-link ${isActive('/admin/queue') ? 'active' : ''}`}
                         to="/admin/queue"
                       >
@@ -120,11 +128,18 @@ export const Navbar: React.FC = () => {
                     </li>
                   )}
                   {user.is_handler ? (
-                    <li>
-                      <Link className="dropdown-item py-2" to="/admin/queue">
-                        <i className="bi bi-list-task me-2 text-secondary"></i>All Issues Queue
-                      </Link>
-                    </li>
+                    <>
+                      <li>
+                        <Link className="dropdown-item py-2" to="/admin/dashboard">
+                          <i className="bi bi-graph-up me-2 text-primary"></i>Executive Analytics Dashboard
+                        </Link>
+                      </li>
+                      <li>
+                        <Link className="dropdown-item py-2" to="/admin/queue">
+                          <i className="bi bi-list-task me-2 text-secondary"></i>All Issues Queue
+                        </Link>
+                      </li>
+                    </>
                   ) : (
                     <li>
                       <Link className="dropdown-item py-2" to="/my-complaints">

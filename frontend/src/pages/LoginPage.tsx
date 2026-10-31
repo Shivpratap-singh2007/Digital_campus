@@ -33,7 +33,7 @@ export const LoginPage: React.FC = () => {
     try {
       await fetchCsrfToken();
       const user = await login(email, password);
-      const defaultDashboard = '/';
+      const defaultDashboard = (user.is_handler || user.is_admin) ? '/admin/dashboard' : '/';
       const from = (location.state as any)?.from?.pathname || defaultDashboard;
       navigate(from, { replace: true });
     } catch (err: any) {

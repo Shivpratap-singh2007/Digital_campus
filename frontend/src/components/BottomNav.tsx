@@ -17,7 +17,8 @@ export const BottomNav: React.FC = () => {
   const trackerPath = user.is_handler ? '/admin/queue' : '/my-complaints';
 
   // Real route-based active tab highlighting
-  const isHomeActive = currentPath === '/' || currentPath === '/dashboard';
+  const isHomeActive = currentPath === '/';
+  const isDashboardActive = currentPath === '/admin/dashboard' || currentPath === '/dashboard';
 
   const isTrackerActive =
     currentPath.startsWith('/my-complaints') ||
@@ -41,6 +42,17 @@ export const BottomNav: React.FC = () => {
           <i className={`bi ${isHomeActive ? 'bi-house-door-fill' : 'bi-house-door'}`}></i>
           <span>Home</span>
         </Link>
+
+        {user.is_handler && (
+          <Link
+            to="/admin/dashboard"
+            className={`cv-bottom-nav-item ${isDashboardActive ? 'active' : ''}`}
+            aria-label="Dashboard"
+          >
+            <i className={`bi ${isDashboardActive ? 'bi-graph-up-arrow' : 'bi-graph-up'}`}></i>
+            <span>Analytics</span>
+          </Link>
+        )}
 
         <Link
           to={trackerPath}
