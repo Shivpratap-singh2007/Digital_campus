@@ -17,7 +17,6 @@ import { ComplaintDetailPage } from './pages/ComplaintDetailPage';
 import { QueuePage } from './pages/QueuePage';
 import { CreateIssuePage } from './pages/CreateIssuePage';
 import { IssueDetailPage } from './pages/IssueDetailPage';
-import { DashboardPage } from './pages/DashboardPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { SettingsPage } from './pages/SettingsPage';
 
@@ -76,14 +75,7 @@ const AppShell: React.FC = () => {
             <Route path="/auth/resend-verification" element={<Navigate to="/verify-email" replace />} />
 
             {/* Unified Mobile App Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  {user?.is_handler ? <DashboardPage /> : <HomePage />}
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
             <Route
               path="/tracker"
               element={
@@ -160,14 +152,7 @@ const AppShell: React.FC = () => {
               }
             />
             <Route path="/issues/:id" element={<Navigate to="/admin/issues/:id" replace />} />
-            <Route
-              path="/admin/dashboard"
-              element={
-                <ProtectedRoute requireHandler>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/admin/dashboard" element={<Navigate to="/" replace />} />
             <Route
               path="/admin/audit-log"
               element={

@@ -107,7 +107,7 @@ export const SettingsPage: React.FC = () => {
                 Quick Navigation
               </div>
               <div className="d-flex flex-wrap gap-2 mb-4">
-                <Link to={user.is_handler ? '/admin/dashboard' : '/'} className="btn btn-sm btn-outline-secondary">
+                <Link to="/" className="btn btn-sm btn-outline-secondary">
                   <i className="bi bi-house-door me-1"></i>Home Dashboard
                 </Link>
                 <Link to={user.is_handler ? '/admin/queue' : '/my-complaints'} className="btn btn-sm btn-outline-secondary">

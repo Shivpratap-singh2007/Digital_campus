@@ -33,7 +33,7 @@ export const LoginPage: React.FC = () => {
     try {
       await fetchCsrfToken();
       const user = await login(email, password);
-      const defaultDashboard = user.is_handler ? '/admin/dashboard' : '/';
+      const defaultDashboard = '/';
       const from = (location.state as any)?.from?.pathname || defaultDashboard;
       navigate(from, { replace: true });
     } catch (err: any) {
@@ -117,14 +117,6 @@ export const LoginPage: React.FC = () => {
                   >
                     <span>🛡️ Administrator</span>
                     <span className="badge bg-danger-subtle text-danger">Autofill</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-between px-3"
-                    onClick={() => handleQuickLogin('handler@campus.edu', 'HandlerPass123!')}
-                  >
-                    <span>🔧 Operational Handler</span>
-                    <span className="badge bg-secondary-subtle text-secondary">Autofill</span>
                   </button>
                 </div>
               </div>

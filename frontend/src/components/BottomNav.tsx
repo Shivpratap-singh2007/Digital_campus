@@ -13,13 +13,11 @@ export const BottomNav: React.FC = () => {
   const currentPath = location.pathname;
 
   // Role-appropriate destinations
-  const homePath = user.is_handler ? '/admin/dashboard' : '/';
+  const homePath = '/';
   const trackerPath = user.is_handler ? '/admin/queue' : '/my-complaints';
 
   // Real route-based active tab highlighting
-  const isHomeActive = user.is_handler
-    ? currentPath === '/admin/dashboard' || currentPath === '/' || currentPath === '/dashboard'
-    : currentPath === '/' || currentPath === '/dashboard';
+  const isHomeActive = currentPath === '/' || currentPath === '/dashboard';
 
   const isTrackerActive =
     currentPath.startsWith('/my-complaints') ||
