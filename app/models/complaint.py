@@ -102,6 +102,9 @@ class AnalysisResult(db.Model):
     
     # Serialized text embedding vector (JSON list of floats) for fast pairwise comparisons
     embedding_json = db.Column(db.Text, nullable=True)
+    
+    # Extended AI Pipeline metadata (formal memo, technician action sheet, hazard visual analysis, recurrence assessment)
+    ai_metadata_json = db.Column(db.Text, nullable=True)
 
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 

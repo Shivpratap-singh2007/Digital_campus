@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models.complaint import Complaint, AnalysisResult
 from app.services.semantic import semantic_engine
 from app.services.priority_rules import evaluate_priority
+from app.services.ai_pipeline import run_full_ai_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,19 @@ def run_complaint_analysis(complaint: Complaint) -> bool:
         analysis.is_semantic_available = cat_result["is_available"]
         if cat_result.get("embedding"):
             analysis.embedding_json = json.dumps(cat_result["embedding"])
+
+        # Populate extended AI metadata (formal memo, technician action sheet, hazard analysis, recurrence)
+        try:
+            full_ai = run_full_ai_pipeline(
+                title=complaint.title,
+                description=complaint.description,
+                building=complaint.building,
+                room=complaint.room,
+                user_category=complaint.user_category,
+            )
+            analysis.ai_metadata_json = json.dumps(full_ai)
+        except Exception as ai_err:
+            logger.warning(f"Extended AI metadata extraction warning: {ai_err}")
 
         # Update complaint fields
         complaint.suggested_category = cat_result["suggested_category"]

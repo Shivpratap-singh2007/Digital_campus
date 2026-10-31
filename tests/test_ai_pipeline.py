@@ -130,3 +130,140 @@ def test_complaint_submission_executes_ai_pipeline(client, verified_user, handle
     assert complaint.issue_link.issue_id == active_issue.id
     assert complaint.status == active_issue.status
 
+    # Verify extended AI pipeline components returned in response
+    ai_pipe = data["ai_pipeline"]
+    assert "formal_memo" in ai_pipe
+    assert "technician_action_sheet" in ai_pipe
+    assert "hazard_analysis" in ai_pipe
+    assert "repeat_risk" in ai_pipe
+    assert ai_pipe["formal_memo"]["subject"].startswith("FACILITY INCIDENT MEMORANDUM")
+    assert ai_pipe["technician_action_sheet"]["assigned_unit"] == "Campus Rapid Hydraulics & Plumbing Services"
+    assert ai_pipe["technician_action_sheet"]["sla_resolution_hours"] == 12
+
+    # Verify get_complaint endpoint returns analysis metadata with action sheet and memo
+    get_res = client.get(f"/api/complaints/{comp_id}")
+    assert get_res.status_code == 200
+    detail = get_res.get_json()
+    assert detail["analysis"] is not None
+    assert detail["analysis"]["technician_action_sheet"] is not None
+    assert detail["analysis"]["formal_memo"] is not None
+
+
+def test_generate_formal_memo_and_hinglish_normalization():
+    """Verify intelligent text normalization and formal administrative memorandum generation."""
+    from app.services.ai_pipeline import generate_formal_memo, normalize_text_to_formal_english
+
+    # Hinglish text normalization
+    raw_hinglish = "Physics lab me switchboard me spark ho raha hai aur bijli band hai jaldi karo"
+    normalized = normalize_text_to_formal_english(raw_hinglish)
+    assert "sparking" in normalized.lower() or "arcing" in normalized.lower()
+    assert "outage" in normalized.lower() or "disruption" in normalized.lower()
+
+    # Administrative memorandum generation
+    memo = generate_formal_memo(
+        title="Hostel washroom me nal se paani beh raha hai",
+        description="Washroom me nal kharab hai paani beh raha hai aur bathroom ganda hai",
+        building="Tagore Hostel Block B",
+        room="204",
+    )
+    assert memo["memo_id"].startswith("MEMO-")
+    assert "Tagore Hostel Block B, Room 204" in memo["location_context"]
+    assert "Sanitation" in memo["subject"] or "PLUMBING" in memo["subject"]
+    assert len(memo["actionable_scope"]) >= 3
+    assert "MEMORANDUM" in memo["full_memo_text"]
+
+
+def test_generate_technician_action_sheet():
+    """Verify technician action sheets across categories and priority SLAs."""
+    from app.services.ai_pipeline import generate_technician_action_sheet
+
+    # 1. Critical Electrical
+    elec_sheet = generate_technician_action_sheet(
+        category="Electrical & Hardware",
+        priority="Critical (P1)",
+        title="Live wire spark",
+        description="Sparks and smoke from distribution box",
+    )
+    assert elec_sheet["work_order_code"].startswith("WO-")
+    assert elec_sheet["assigned_unit"] == "Electrical Grid & Power Systems Maintenance Wing"
+    assert elec_sheet["sla_resolution_hours"] == 2
+    assert any("LOTO" in s or "Lockout" in s for s in elec_sheet["safety_protocol"])
+    assert any("Multimeter" in t for t in elec_sheet["required_tools_and_parts"])
+
+    # 2. Medium Sanitation
+    plumb_sheet = generate_technician_action_sheet(
+        category="Sanitation & Plumbing",
+        priority="Medium (P2)",
+        title="Water leak",
+        description="Tap leaking",
+    )
+    assert plumb_sheet["assigned_unit"] == "Campus Rapid Hydraulics & Plumbing Services"
+    assert plumb_sheet["sla_resolution_hours"] == 12
+    assert any("wrench" in t.lower() or "teflon" in t.lower() for t in plumb_sheet["required_tools_and_parts"])
+
+    # 3. Low Routine Infrastructure
+    infra_sheet = generate_technician_action_sheet(
+        category="General Infrastructure",
+        priority="Low (P3)",
+        title="Loose desk hinge",
+        description="Table in reading room",
+    )
+    assert infra_sheet["sla_resolution_hours"] == 48
+
+
+def test_multi_hazard_visual_ai_analysis():
+    """Verify multi-hazard visual context analysis logic."""
+    from app.services.ai_pipeline import analyze_image_evidence
+
+    # Without image
+    no_img = analyze_image_evidence(image_file=None, title="Test", description="Test")
+    assert no_img["has_image"] is False
+    assert no_img["hazard_score"] == 0.0
+
+    # With dummy image mock
+    class DummyImage:
+        filename = "hazard_evidence.jpg"
+
+    hazard_img = analyze_image_evidence(
+        image_file=DummyImage(),
+        title="Live wire sparked with flames",
+        description="Exposed wire on wall with danger of electric shock",
+        category="Electrical & Hardware",
+    )
+    assert hazard_img["has_image"] is True
+    assert "Critical" in hazard_img["hazard_rating"]
+    assert hazard_img["visual_confidence_score"] >= 0.90
+    assert len(hazard_img["detected_features"]) >= 1
+
+
+def test_predictive_recurrence_and_repeat_failure_risk():
+    """Verify chronic failure pattern detection and recurrence risk scoring."""
+    from app.services.ai_pipeline import evaluate_repeat_failure_risk
+
+    # 1. No past records -> isolated incident
+    isolated = evaluate_repeat_failure_risk(
+        building="Ramanujan Hall",
+        room="101",
+        category="Sanitation & Plumbing",
+        historical_complaints=[],
+    )
+    assert isolated["is_chronic_failure"] is False
+    assert isolated["risk_level"] == "Isolated Incident (Baseline)"
+
+    # 2. Chronic recurrence: multiple historical complaints in same building & category
+    history = [
+        {"building": "Ramanujan Hall", "room": "101", "category": "Sanitation & Plumbing"},
+        {"building": "Ramanujan Hall", "room": "102", "category": "Sanitation & Plumbing"},
+        {"building": "Ramanujan Hall", "room": "101", "category": "Sanitation & Plumbing"},
+    ]
+    chronic = evaluate_repeat_failure_risk(
+        building="Ramanujan Hall",
+        room="101",
+        category="Sanitation & Plumbing",
+        historical_complaints=history,
+    )
+    assert chronic["is_chronic_failure"] is True
+    assert chronic["repeat_incident_count"] == 3
+    assert chronic["recurrence_score"] >= 0.70
+    assert "overhaul" in chronic["preventive_advisory"].lower()
+
